@@ -62,3 +62,13 @@ These hooks exist to support automated testing. **Do not remove them.** When cha
 
 ### Rule of Thumb
 > If a patch touches gameplay logic, smoke tests must pass before handoff.
+
+### Controls (Phase 3+)
+
+**Cannon**: Forward-only shooting (angle locked to -90° / straight up). No diagonal aiming.
+- **Arrow Left / A**: Move cannon left
+- **Arrow Right / D**: Move cannon right
+- **Pointer drag**: Move cannon horizontally (mobile-friendly)
+- **Space / Enter**: Start run / restart
+
+This invariant is verified by `npm run smoke` (`testForwardOnlyInvariant`).

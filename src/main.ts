@@ -244,10 +244,10 @@ class GameScene extends Phaser.Scene {
     });
     this.hudLeftText.setDepth(110);
 
-    // HUD — center block (Wave + Base HP)
-    this.hudCenterText = this.add.text(GAME_WIDTH / 2, 15, "", {
+    // HUD — center block (Wave + Base HP — moved up + smaller to reduce top crowding)
+    this.hudCenterText = this.add.text(GAME_WIDTH / 2, 9, "", {
       fontFamily: "Arial",
-      fontSize: "15px",
+      fontSize: "14px",
       color: "#ffffff",
       fontStyle: "bold",
     }).setOrigin(0.5, 0);
@@ -262,10 +262,10 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(1, 0);
     this.hudRightText.setDepth(110);
 
-    // Lives — large hearts below right HUD
-    this.livesText = this.add.text(GAME_WIDTH - 20, 36, "", {
+    // Lives — below right HUD (y pushed down to 46 for more breathing room)
+    this.livesText = this.add.text(GAME_WIDTH - 20, 46, "", {
       fontFamily: "Arial",
-      fontSize: "18px",
+      fontSize: "16px",
       color: "#ff5555",
       fontStyle: "bold",
     }).setOrigin(1, 0);

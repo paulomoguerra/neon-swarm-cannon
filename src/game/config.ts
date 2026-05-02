@@ -14,7 +14,7 @@ export const CANNON_MUZZLE_OFFSET = 42;
 // Mob Control mob tuning
 export const MOB_TUNING = {
   blueSpeed: 280,
-  redSpeed: 68,
+  redSpeed: 60,
   fireInterval: 0.28,
   redSpawnInterval: 2.2,
   maxBlueMobs: 180,
@@ -96,10 +96,10 @@ export const ENDLESS_TUNING = {
   redSpawnIntervalStart: 2.2,
   redSpawnIntervalMin: 0.75,
   redSpawnIntervalDecay: 0.12,
-  redSpeedStart: 68,
+  redSpeedStart: 60,
   redSpeedMaxBonus: 55,
-  redSpeedPerWave: 6,
-  dangerGraceSeconds: 35,
+  redSpeedPerWave: 5,
+  dangerGraceSeconds: 45,
 };
 
 // Cannon horizontal movement bounds
