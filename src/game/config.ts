@@ -106,6 +106,9 @@ export const ENDLESS_TUNING = {
 export const CANNON_MIN_X = 240;
 export const CANNON_MAX_X = 720;
 
+// Keyboard cannon movement speed (pixels per second)
+export const KEYBOARD_CANNON_SPEED = 320;
+
 // Power-up settings
 export const POWERUP_SPAWN_INTERVAL = 14; // seconds between spawns
 export const POWERUP_FALL_SPEED = 80;

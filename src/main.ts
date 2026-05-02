@@ -15,6 +15,7 @@ import {
   ENDLESS_TUNING,
   CANNON_MIN_X,
   CANNON_MAX_X,
+  KEYBOARD_CANNON_SPEED,
   POWERUP_SPAWN_INTERVAL,
   POWERUP_FALL_SPEED,
   SHIELD_DURATION,
@@ -116,6 +117,10 @@ class GameScene extends Phaser.Scene {
 
   // Cannon dragging
   private isDragging = false;
+
+  // Keyboard cannon movement
+  private keyLeft = false;
+  private keyRight = false;
 
   // Timers
   private redSpawnTimer = 0;
@@ -337,13 +342,18 @@ class GameScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-F", () => this.toggleFullscreen());
     this.input.keyboard?.on("keydown-1", () => this.handleUpgradeKey("fire"));
     this.input.keyboard?.on("keydown-2", () => this.handleUpgradeKey("lives"));
+    this.input.keyboard?.on("keydown-LEFT", () => { this.keyLeft = true; });
+    this.input.keyboard?.on("keydown-RIGHT", () => { this.keyRight = true; });
+    this.input.keyboard?.on("keyup-LEFT", () => { this.keyLeft = false; });
+    this.input.keyboard?.on("keyup-RIGHT", () => { this.keyRight = false; });
+    this.input.keyboard?.on("keydown-A", () => { this.keyLeft = true; });
+    this.input.keyboard?.on("keydown-D", () => { this.keyRight = true; });
+    this.input.keyboard?.on("keyup-A", () => { this.keyLeft = false; });
+    this.input.keyboard?.on("keyup-D", () => { this.keyRight = false; });
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.handlePointer(pointer));
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      if (this.mode === "playing") {
-        this.updateAim(pointer.x, pointer.y);
-        if (this.isDragging) {
-          this.moveCannonToX(pointer.x);
-        }
+      if (this.mode === "playing" && this.isDragging) {
+        this.moveCannonToX(pointer.x);
       }
     });
     this.input.on("pointerup", () => { this.isDragging = false; });
@@ -473,6 +483,20 @@ class GameScene extends Phaser.Scene {
       return;
     }
     this.drawScene();
+
+    // Keyboard cannon movement (ArrowLeft/A = left, ArrowRight/D = right)
+    if (this.cannon) {
+      const dx = (this.keyRight ? 1 : 0) - (this.keyLeft ? 1 : 0);
+      if (dx !== 0) {
+        const newX = Phaser.Math.Clamp(
+          this.cannon.body.x + dx * KEYBOARD_CANNON_SPEED * dt,
+          CANNON_MIN_X,
+          CANNON_MAX_X,
+        );
+        this.cannon.body.x = newX;
+        this.cannon.x = newX;
+      }
+    }
 
     // Timers
     this.feedbackCooldown = Math.max(0, this.feedbackCooldown - dt);
@@ -728,6 +752,10 @@ class GameScene extends Phaser.Scene {
     this.rapidTimer = 0;
     this.coins = 0;
 
+    // Reset keyboard movement state
+    this.keyLeft = false;
+    this.keyRight = false;
+
     // Load best from localStorage
     this.bestScore = loadBestScore();
     this.bestDistance = loadBestDistance();
@@ -902,26 +930,14 @@ class GameScene extends Phaser.Scene {
       this.resetGame();
       return;
     }
+    // In playing mode: start dragging and move cannon to pointer X
     this.isDragging = true;
-    this.updateAim(pointer.x, pointer.y);
+    this.moveCannonToX(pointer.x);
   }
 
-  private updateAim(pointerX: number, pointerY: number): void {
-    if (!this.cannon) return;
-    const cx = this.cannon.body.x;
-    const cy = this.cannon.body.y;
-    const angle = Phaser.Math.Angle.Between(cx, cy, pointerX, pointerY);
-    // Clamp to upward cone
-    const clamped = Phaser.Math.Clamp(angle, CANNON_ANGLE_MIN, CANNON_ANGLE_MAX);
-    this.cannonAngle = clamped;
-    this.cannon.angle = clamped;
-
-    // Rotate barrel child to match aim
-    // barrel is at list index 3; it starts pointing up (-PI/2 rotation offset)
-    const barrel = this.cannon.body.list[3] as Phaser.GameObjects.Rectangle;
-    if (barrel) {
-      barrel.rotation = clamped + Math.PI / 2;
-    }
+  private updateAim(_pointerX: number, _pointerY: number): void {
+    // Cannon angle is now locked to straight forward — no diagonal aiming.
+    // This method is kept as a no-op to avoid breaking any existing call paths.
   }
 
   private moveCannonToX(targetX: number): void {
