@@ -27,22 +27,22 @@ export function formatCoinsLine(totalCoins: number): string {
 
 /**
  * Returns the fire-rate upgrade line for the menu.
- * `[1] Fire Rate Lv{N}  (C coins)` or `[1] Fire Rate MAX`
+ * Touch-first: `Tap Fire Rate Lv{N}  (C coins)` or `Tap Fire Rate MAX`
  */
 export function formatFireUpgradeLine(fireLevel: number): string {
-  if (fireLevel >= UPGRADE_MAX_LEVEL) return "[1] Fire Rate MAX";
+  if (fireLevel >= UPGRADE_MAX_LEVEL) return "Tap Fire Rate MAX";
   const cost = UPGRADE_FIRE_COSTS[fireLevel];
-  return `[1] Fire Rate Lv${fireLevel + 1}  (${cost} coins)`;
+  return `Tap Fire Rate Lv${fireLevel + 1}  (${cost} coins)`;
 }
 
 /**
  * Returns the lives upgrade line for the menu.
- * `[2] Lives Lv{N}  (C coins)` or `[2] Lives MAX`
+ * Touch-first: `Tap Lives Lv{N}  (C coins)` or `Tap Lives MAX`
  */
 export function formatLivesUpgradeLine(livesLevel: number): string {
-  if (livesLevel >= UPGRADE_MAX_LEVEL) return "[2] Lives MAX";
+  if (livesLevel >= UPGRADE_MAX_LEVEL) return "Tap Lives MAX";
   const cost = UPGRADE_LIVES_COSTS[livesLevel];
-  return `[2] Lives Lv${livesLevel + 1}  (${cost} coins)`;
+  return `Tap Lives Lv${livesLevel + 1}  (${cost} coins)`;
 }
 
 // ---------------------------------------------------------------------------

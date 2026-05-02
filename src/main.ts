@@ -117,6 +117,7 @@ class GameScene extends Phaser.Scene {
 
   // Cannon dragging
   private isDragging = false;
+  private cannonTargetX = CANNON_X;
 
   // Keyboard cannon movement
   private keyLeft = false;
@@ -149,17 +150,18 @@ class GameScene extends Phaser.Scene {
   private powerupStatusText!: Phaser.GameObjects.Text;
   private promptText!: Phaser.GameObjects.Text;
   private cannonAngleText!: Phaser.GameObjects.Text;
+  private touchHintText!: Phaser.GameObjects.Text;
   private scrollOffset = 0;
   // Position constants for prompt text centering
   private static readonly MENU_PROMPT_Y = 378;
   private static readonly END_RESTART_PROMPT_Y = 370;
   private promptTween?: Phaser.Tweens.Tween;
 
-  // Upgrade button bounds (menu only)
+  // Upgrade button bounds (menu only) — touch-friendly: taller + more spacing
   private static readonly UPGRADE_BW = 300;
-  private static readonly UPGRADE_BH = 28;
-  private static readonly UPGRADE_FIRE_BY = 182;
-  private static readonly UPGRADE_LIVES_BY = 218;
+  private static readonly UPGRADE_BH = 40;
+  private static readonly UPGRADE_FIRE_BY = 170;
+  private static readonly UPGRADE_LIVES_BY = 220;
   private static readonly UPGRADE_BX = GAME_WIDTH / 2 - GameScene.UPGRADE_BW / 2;
 
   constructor() {
@@ -291,8 +293,20 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.coinsText.setDepth(110);
 
+    // Touch/mobile control hint — shown only during gameplay, low-alpha, lower area
+    this.touchHintText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 18, "DRAG TO MOVE", {
+      fontFamily: "Arial",
+      fontSize: "12px",
+      color: "#ffffff",
+      fontStyle: "bold",
+      stroke: "#000000",
+      strokeThickness: 2,
+    }).setOrigin(0.5).setAlpha(0.4);
+    this.touchHintText.setDepth(110);
+    this.touchHintText.setVisible(false);
+
     // Upgrade buttons (shown on menu below coins)
-    this.upgradeFireText = this.add.text(GAME_WIDTH / 2, 196, "", {
+    this.upgradeFireText = this.add.text(GAME_WIDTH / 2, 190, "", {
       fontFamily: "Arial",
       fontSize: "12px",
       color: "#aaddff",
@@ -302,7 +316,7 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.upgradeFireText.setDepth(110);
 
-    this.upgradeLivesText = this.add.text(GAME_WIDTH / 2, 216, "", {
+    this.upgradeLivesText = this.add.text(GAME_WIDTH / 2, 240, "", {
       fontFamily: "Arial",
       fontSize: "12px",
       color: "#ffaaaa",
@@ -493,8 +507,19 @@ class GameScene extends Phaser.Scene {
           CANNON_MIN_X,
           CANNON_MAX_X,
         );
-        this.cannon.body.x = newX;
-        this.cannon.x = newX;
+        this.cannonTargetX = newX;
+      }
+      // Smooth follow toward target X
+      const diff = this.cannonTargetX - this.cannon.body.x;
+      if (Math.abs(diff) > 0.1) {
+        const lerpSpeed = 14; // higher = snappier, ~14 means ~reachable in ~0.1s
+        const newBodyX = this.cannon.body.x + diff * lerpSpeed * dt;
+        const clampedX = Phaser.Math.Clamp(newBodyX, CANNON_MIN_X, CANNON_MAX_X);
+        this.cannon.body.x = clampedX;
+        this.cannon.x = clampedX;
+      } else {
+        this.cannon.body.x = this.cannonTargetX;
+        this.cannon.x = this.cannonTargetX;
       }
     }
 
@@ -751,6 +776,7 @@ class GameScene extends Phaser.Scene {
     this.shieldTimer = 0;
     this.rapidTimer = 0;
     this.coins = 0;
+    this.cannonTargetX = CANNON_X;
 
     // Reset keyboard movement state
     this.keyLeft = false;
@@ -805,6 +831,7 @@ class GameScene extends Phaser.Scene {
     this.hudRightText.setVisible(true);
     this.livesText.setVisible(true);
     this.cannonAngleText.setVisible(true);
+    this.touchHintText.setVisible(true);
 
     // Create level gates
     this.createLevelGates();
@@ -861,6 +888,7 @@ class GameScene extends Phaser.Scene {
     this.upgradeLivesText.setVisible(false);
     this.upgradeFireBg.setVisible(false);
     this.upgradeLivesBg.setVisible(false);
+    this.touchHintText.setVisible(false);
 
     // Subtitle becomes summary lines
     this.subtitleText.setText(summaryLines.join("   |   ")).setVisible(true);
@@ -942,9 +970,7 @@ class GameScene extends Phaser.Scene {
 
   private moveCannonToX(targetX: number): void {
     if (!this.cannon) return;
-    const newX = Phaser.Math.Clamp(targetX, CANNON_MIN_X, CANNON_MAX_X);
-    this.cannon.body.x = newX;
-    this.cannon.x = newX;
+    this.cannonTargetX = Phaser.Math.Clamp(targetX, CANNON_MIN_X, CANNON_MAX_X);
   }
 
   private spawnBlueMob(): void {
@@ -1095,8 +1121,8 @@ class GameScene extends Phaser.Scene {
         if (base.hp <= 0) {
           this.checkpointsDestroyed += 1;
           this.coins += COIN_PER_CHECKPOINT;
-          // Show checkpoint reward big and centered, clear of HUD (y=140, depth 200)
-          const rewardText = this.add.text(GAME_WIDTH / 2, 140, `CHECKPOINT!  +${COIN_PER_CHECKPOINT}`, {
+          // Show checkpoint reward below HUD/base area (y=185, depth 200) to avoid obscuring top HUD
+          const rewardText = this.add.text(GAME_WIDTH / 2, 185, `CHECKPOINT!  +${COIN_PER_CHECKPOINT}`, {
             fontFamily: "Arial",
             fontSize: "28px",
             color: "#ffcc00",
@@ -1106,7 +1132,7 @@ class GameScene extends Phaser.Scene {
           }).setOrigin(0.5).setDepth(200);
           this.tweens.add({
             targets: rewardText,
-            y: 110,
+            y: 155,
             alpha: 0,
             scale: 1.2,
             duration: 900,
@@ -1254,6 +1280,7 @@ class GameScene extends Phaser.Scene {
       this.overlayDim.setVisible(false);
       this.endCard.setVisible(false);
       this.endPromptButton.setVisible(false);
+      this.touchHintText.setVisible(false);
 
       // Hide HUD elements during menu
       this.hudLeftText.setVisible(false);
@@ -1360,7 +1387,8 @@ class GameScene extends Phaser.Scene {
     const win = window as typeof window & {
       render_game_to_text: () => string;
       advanceTime: (ms: number) => void;
-      debug_shop_action: (type: "fire" | "lives") => ShopResult | null;
+      debug_shop_action: (type: "fire" | "lives") => import("./game/debugHooks").ShopResult | null;
+      debug_move_cannon_to_x: (x: number, ms: number) => void;
     };
     win.render_game_to_text = () => {
       const snapshot: GameDebugSnapshot = {
@@ -1411,6 +1439,13 @@ class GameScene extends Phaser.Scene {
         upgrades: this.upgradeState,
         mode: this.mode,
       };
+    };
+    win.debug_move_cannon_to_x = (x: number, ms: number) => {
+      this.moveCannonToX(x);
+      const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+      for (let i = 0; i < steps; i += 1) {
+        this.stepGame(1 / 60);
+      }
     };
   }
 }

@@ -24,13 +24,14 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 
 ## Debug Hooks
 
-The game exposes three test hooks on `window`:
+The game exposes four test hooks on `window`:
 
 | Hook | Signature | Purpose |
 |---|---|---|
 | `render_game_to_text` | `() => string` | Returns a JSON snapshot of current game state |
 | `advanceTime` | `(ms: number) => void` | Advances simulation deterministically by `ms` milliseconds |
 | `debug_shop_action` | `(type: "fire" \| "lives") => ShopResult \| null` | Buys an upgrade from the menu and returns the result |
+| `debug_move_cannon_to_x` | `(x: number, ms: number) => void` | Sets cannon target X and advances simulation by `ms` ms; verifies smooth touch/drag movement invariant |
 
 These hooks exist to support automated testing. **Do not remove them.** When changing gameplay code, ensure hooks continue to work correctly.
 

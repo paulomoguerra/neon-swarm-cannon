@@ -32,6 +32,13 @@ export interface GameDebugHooks {
    * Only valid while mode === "menu". Returns null if called in another mode.
    */
   debug_shop_action: (type: "fire" | "lives") => ShopResult | null;
+
+  /**
+   * Sets the cannon's horizontal movement target to `x` and advances time by `ms`.
+   * The cannon will smoothly move toward the clamped `x` within CANNON_MIN_X/MAX_X.
+   * Used by smoke tests to verify touch/drag movement invariant.
+   */
+  debug_move_cannon_to_x: (x: number, ms: number) => void;
 }
 
 declare global {
@@ -39,5 +46,6 @@ declare global {
     render_game_to_text: GameDebugHooks["render_game_to_text"];
     advanceTime: GameDebugHooks["advanceTime"];
     debug_shop_action: GameDebugHooks["debug_shop_action"];
+    debug_move_cannon_to_x: GameDebugHooks["debug_move_cannon_to_x"];
   }
 }

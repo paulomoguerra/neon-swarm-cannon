@@ -278,6 +278,62 @@ async function testForwardOnlyInvariant(page) {
   console.log(`  [PASS] ArrowLeft moves cannon left (${xBeforeLeft} -> ${stateAfterLeft.cannon.x}), angle stays ${stateAfterLeft.cannon.angleDegrees}`);
 }
 
+async function testDebugMoveCannonToX(page) {
+  // Start a run
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(500);
+
+  const initial = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(initial.mode === "playing", `Expected mode 'playing', got '${initial.mode}'`);
+  assert(initial.cannon !== null, "cannon must not be null during play");
+
+  const xBefore = initial.cannon.x;
+
+  // Move cannon to a target X to the right
+  const targetX = Math.min(xBefore + 80, 720); // CANNON_MAX_X = 720
+  await page.evaluate(
+    (tx) => window.debug_move_cannon_to_x(tx, 300),
+    targetX
+  );
+  await page.waitForTimeout(100);
+
+  const stateAfter = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(stateAfter.cannon !== null, "cannon must not be null after debug_move_cannon_to_x");
+  assert(
+    stateAfter.cannon.x > xBefore,
+    `After move right: cannon.x should increase (was ${xBefore}, got ${stateAfter.cannon.x})`
+  );
+  assert(
+    stateAfter.cannon.x >= targetX - 2 && stateAfter.cannon.x <= targetX + 2,
+    `Cannon.x should be near target ${targetX}, got ${stateAfter.cannon.x}`
+  );
+  assert(
+    stateAfter.cannon.angleDegrees === -90,
+    `After debug_move_cannon_to_x: angle must stay -90, got ${stateAfter.cannon.angleDegrees}`
+  );
+  console.log(`  [PASS] debug_move_cannon_to_x moves cannon right (${xBefore} -> ${stateAfter.cannon.x}), angle stays ${stateAfter.cannon.angleDegrees}`);
+
+  // Move back to the left using debug_move_cannon_to_x
+  const leftTarget = Math.max(xBefore, 240); // CANNON_MIN_X = 240
+  await page.evaluate(
+    (tx) => window.debug_move_cannon_to_x(tx, 300),
+    leftTarget
+  );
+  await page.waitForTimeout(100);
+
+  const stateLeft = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(stateLeft.cannon !== null, "cannon must not be null after left move");
+  assert(
+    stateLeft.cannon.x <= xBefore + 1,
+    `After move left: cannon.x should be <= original (was ${xBefore}, got ${stateLeft.cannon.x})`
+  );
+  assert(
+    stateLeft.cannon.angleDegrees === -90,
+    `After left debug_move: angle must stay -90, got ${stateLeft.cannon.angleDegrees}`
+  );
+  console.log(`  [PASS] debug_move_cannon_to_x moves cannon left (back to ~${stateLeft.cannon.x}), angle stays ${stateLeft.cannon.angleDegrees}`);
+}
+
 // --- Main ---
 
 async function main() {
@@ -352,6 +408,16 @@ async function main() {
       } catch (e) {
         failed++;
         errors.push({ test: "Forward-only invariant + keyboard movement", error: e.message });
+        throw e;
+      }
+
+      try {
+        console.log("[TEST] debug_move_cannon_to_x hook");
+        await testDebugMoveCannonToX(page);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "debug_move_cannon_to_x hook", error: e.message });
         throw e;
       }
     });
