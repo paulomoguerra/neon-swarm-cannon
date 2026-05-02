@@ -17,9 +17,11 @@ npm run smoke
 Runs automated Playwright smoke tests against a local Vite dev server (port 5173). Verifies:
 
 - Browser title is "Mob Cannon"
-- Debug hooks `render_game_to_text`, `advanceTime`, `debug_shop_action` are present
+- Debug hooks `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x` are present
 - Shop upgrades correctly deduct coins and increment upgrade levels
 - Starting a run and advancing simulation time produces valid game state
+- Cannon forward-only invariant is maintained (angle = -90 degrees, horizontal movement works)
+- Cannon movement via `debug_move_cannon_to_x` hook works correctly
 - Game over state is stable (no crash, canvas present, hooks respond)
 
 ## Debug Hooks
@@ -46,7 +48,7 @@ These hooks exist to support automated testing. **Do not remove them.** When cha
 - `main.ts` extraction into systems is out of scope for hardening patches
 - Balance, spawn rates, controls, shop costs, and visuals should not change during hardening
 
-### Module Boundaries (Phase 2+)
+### Module Boundaries
 | Module | Responsibility |
 |---|---|
 | `main.ts` | Phaser Scene — input, rendering, orchestration, game loop |
@@ -57,19 +59,27 @@ These hooks exist to support automated testing. **Do not remove them.** When cha
 | `game/art.ts` | Phaser object factory functions |
 | `game/world.ts` | Background rendering |
 | `game/effects.ts` | Floating text, ring pulse effects |
-| `game/debugHooks.ts` | Debug hook exports (`render_game_to_text`, `advanceTime`, `debug_shop_action`) |
+| `game/debugHooks.ts` | Debug hook type declarations (`render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x`) |
 | `game/config.ts` | All tuning constants |
 | `game/types.ts` | Shared TypeScript types |
 
 ### Rule of Thumb
 > If a patch touches gameplay logic, smoke tests must pass before handoff.
 
-### Controls (Phase 3+)
+### Controls
 
 **Cannon**: Forward-only shooting (angle locked to -90° / straight up). No diagonal aiming.
+
+Desktop:
 - **Arrow Left / A**: Move cannon left
 - **Arrow Right / D**: Move cannon right
-- **Pointer drag**: Move cannon horizontally (mobile-friendly)
 - **Space / Enter**: Start run / restart
+- **F**: Toggle fullscreen
+- **1**: Buy Fire Rate upgrade (menu shortcut)
+- **2**: Buy Lives upgrade (menu shortcut)
+
+Mobile:
+- **Tap**: Start run / restart / interact with menu
+- **Horizontal drag**: Move cannon left/right
 
 This invariant is verified by `npm run smoke` (`testForwardOnlyInvariant`).
