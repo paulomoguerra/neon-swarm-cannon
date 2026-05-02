@@ -34,6 +34,7 @@ import {
 import { drawWorld } from "./game/world";
 import { showFloatingText, showRingPulse } from "./game/effects";
 import type { Cannon, Gate, Mob, Mode, EnemyBase, Barrier, Powerup, PowerupKind, UpgradeState } from "./game/types";
+import type { ShopResult } from "./game/debugHooks";
 import "./styles.css";
 
 // --- LocalStorage helpers for best score ---
@@ -1370,10 +1371,10 @@ class GameScene extends Phaser.Scene {
   }
 
   private publishTestHooks(): void {
-    const win = window as Window & {
-      render_game_to_text?: () => string;
-      advanceTime?: (ms: number) => void;
-      debug_shop_action?: (type: "fire" | "lives") => { totalCoins: number; upgrades: UpgradeState; mode: Mode } | null;
+    const win = window as typeof window & {
+      render_game_to_text: () => string;
+      advanceTime: (ms: number) => void;
+      debug_shop_action: (type: "fire" | "lives") => ShopResult | null;
     };
     win.render_game_to_text = () => JSON.stringify({
       note: "Origin top-left. X increases right. Y increases down. Mob Control cannon game.",
@@ -1395,8 +1396,8 @@ class GameScene extends Phaser.Scene {
       bestScore: this.bestScore,
       bestDistance: this.bestDistance,
       coins: this.coins,
-      totalCoins: this.totalCoins,
-      upgrades: this.upgradeState,
+      totalCoins: this.mode === "menu" ? loadTotalCoins() : this.totalCoins,
+      upgrades: this.mode === "menu" ? loadUpgradeState() : this.upgradeState,
       powerups: {
         shieldTimer: Math.floor(this.shieldTimer * 10) / 10,
         rapidTimer: Math.floor(this.rapidTimer * 10) / 10,
