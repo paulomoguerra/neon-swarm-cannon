@@ -46,6 +46,25 @@ import {
 import { calculateWave, calculateDistanceDelta, calculateScore, calculateRedSpawnInterval, calculateRedSpeed } from "./game/runMath";
 import type { Cannon, Gate, Mob, Mode, EnemyBase, Barrier, Powerup, PowerupKind, UpgradeState } from "./game/types";
 import type { ShopResult } from "./game/debugHooks";
+import {
+  formatBestLine,
+  formatCoinsLine,
+  formatFireUpgradeLine,
+  formatLivesUpgradeLine,
+  formatHudLeft,
+  formatHudCenter,
+  formatHudRight,
+  formatLivesLine,
+  formatPowerupStatus,
+} from "./game/uiText";
+import {
+  serializePowerups,
+  serializeBase,
+  serializeBarriers,
+  serializeGates,
+  serializeVisibleMobs,
+  type GameDebugSnapshot,
+} from "./game/debugSnapshot";
 import "./styles.css";
 
 class GameScene extends Phaser.Scene {
@@ -1164,25 +1183,16 @@ class GameScene extends Phaser.Scene {
   private updateHud(): void {
     if (this.mode === "playing") {
       // Left: Score and Distance stacked
-      this.hudLeftText.setText(
-        `Score: ${this.score}\nDist: ${Math.floor(this.distanceMeters)}m`
-      );
+      this.hudLeftText.setText(formatHudLeft(this.score, this.distanceMeters));
       // Center: Wave and checkpoints only (short, avoids crowding enemy base visual)
-      this.hudCenterText.setText(
-        `Wave ${this.wave}   CP ${this.checkpointsDestroyed}`
-      );
+      this.hudCenterText.setText(formatHudCenter(this.wave, this.checkpointsDestroyed));
       // Right: Red count and base HP compact
-      this.hudRightText.setText(
-        `Red: ${this.redMobs.length}\nBase ${this.enemyBase ? `${this.enemyBase.hp}/${this.enemyBase.maxHp}` : "—"}`
-      );
+      const baseHp = this.enemyBase ? { hp: this.enemyBase.hp, maxHp: this.enemyBase.maxHp } : null;
+      this.hudRightText.setText(formatHudRight(this.redMobs.length, baseHp));
       // Lives as labelled hearts — unambiguous count + hearts
-      const hearts = this.cannonLives > 0 ? "\u2665".repeat(this.cannonLives) : "";
-      this.livesText.setText(this.cannonLives > 0 ? `Lives: ${this.cannonLives} ${hearts}` : "Lives: 0");
+      this.livesText.setText(formatLivesLine(this.cannonLives));
       // Power-up status line
-      let puLines: string[] = [];
-      if (this.shieldTimer > 0) puLines.push(`SH:${this.shieldTimer.toFixed(0)}s`);
-      if (this.rapidTimer > 0) puLines.push(`RF:${this.rapidTimer.toFixed(0)}s`);
-      this.powerupStatusText.setText(puLines.join("  "));
+      this.powerupStatusText.setText(formatPowerupStatus(this.shieldTimer, this.rapidTimer));
       this.cannonAngleText.setText("");
       return;
     }
@@ -1208,25 +1218,20 @@ class GameScene extends Phaser.Scene {
       // Show best score on menu
       const bs = loadBestScore();
       const bd = loadBestDistance();
-      if (bs > 0 || bd > 0) {
-        this.bestScoreText.setText(`Best Score: ${bs}   Best Dist: ${bd}m`).setVisible(true);
+      const bestLine = formatBestLine(bs, bd);
+      if (bestLine !== "") {
+        this.bestScoreText.setText(bestLine).setVisible(true);
         this.bestScoreText.setPosition(GAME_WIDTH / 2, 152);
       } else {
         this.bestScoreText.setText("").setVisible(false);
       }
       // Coins
       const tc = loadTotalCoins();
-      this.coinsText.setText(`Coins: ${tc}`).setVisible(true);
+      this.coinsText.setText(formatCoinsLine(tc)).setVisible(true);
       // Upgrades
       const ups = loadUpgradeState();
-      const fireCost = ups.fireLevel < UPGRADE_MAX_LEVEL ? UPGRADE_FIRE_COSTS[ups.fireLevel] : null;
-      const livesCost = ups.livesLevel < UPGRADE_MAX_LEVEL ? UPGRADE_LIVES_COSTS[ups.livesLevel] : null;
-      this.upgradeFireText.setText(
-        fireCost != null ? `[1] Fire Rate Lv${ups.fireLevel + 1}  (${fireCost} coins)` : `[1] Fire Rate MAX`
-      ).setVisible(true);
-      this.upgradeLivesText.setText(
-        livesCost != null ? `[2] Lives Lv${ups.livesLevel + 1}  (${livesCost} coins)` : `[2] Lives MAX`
-      ).setVisible(true);
+      this.upgradeFireText.setText(formatFireUpgradeLine(ups.fireLevel)).setVisible(true);
+      this.upgradeLivesText.setText(formatLivesUpgradeLine(ups.livesLevel)).setVisible(true);
       this.promptText.setText("START RUN").setVisible(true);
       this.promptText.y = GameScene.MENU_PROMPT_Y;
       this.promptButton.setVisible(true);
@@ -1341,66 +1346,41 @@ class GameScene extends Phaser.Scene {
       advanceTime: (ms: number) => void;
       debug_shop_action: (type: "fire" | "lives") => ShopResult | null;
     };
-    win.render_game_to_text = () => JSON.stringify({
-      note: "Origin top-left. X increases right. Y increases down. Mob Control cannon game.",
-      mode: this.mode,
-      cannon: this.cannon ? {
-        x: Math.round(this.cannon.body.x),
-        y: Math.round(this.cannon.body.y),
-        angleDegrees: Math.round(Phaser.Math.RadToDeg(this.cannonAngle)),
-      } : null,
-      runTimeSeconds: Math.floor(this.runTimeSeconds * 100) / 100,
-      distanceMeters: Math.floor(this.distanceMeters),
-      score: this.score,
-      wave: this.wave,
-      checkpointsDestroyed: this.checkpointsDestroyed,
-      cannonLives: this.cannonLives,
-      blueMobCount: this.blueMobs.length,
-      redMobCount: this.redMobs.length,
-      kills: this.kills,
-      bestScore: this.bestScore,
-      bestDistance: this.bestDistance,
-      coins: this.coins,
-      totalCoins: this.mode === "menu" ? loadTotalCoins() : this.totalCoins,
-      upgrades: this.mode === "menu" ? loadUpgradeState() : this.upgradeState,
-      powerups: {
-        shieldTimer: Math.floor(this.shieldTimer * 10) / 10,
-        rapidTimer: Math.floor(this.rapidTimer * 10) / 10,
-        active: this.powerups.map((p) => ({ id: p.id, kind: p.kind, x: Math.round(p.x), y: Math.round(p.y) })),
-      },
-      base: this.enemyBase ? {
-        hp: this.enemyBase.hp,
-        maxHp: this.enemyBase.maxHp,
-        x: this.enemyBase.x,
-        y: this.enemyBase.y,
-      } : null,
-      barriers: this.barriers.map((b) => ({
-        id: b.id,
-        hp: b.hp,
-        maxHp: b.maxHp,
-        x: b.x,
-        y: b.y,
-      })),
-      gates: this.gates.map((g) => ({
-        id: g.id,
-        label: g.kind === "multiply" ? `x${g.value}` : `+${g.value}`,
-        kind: g.kind,
-        value: g.value,
-        x: g.x,
-        y: g.y,
-        processedCount: g.processedMobIds.size,
-      })),
-      visible: {
-        blue: this.blueMobs.filter((m) => m.body.active).slice(0, 6).map((m) => ({
-          x: Math.round(m.body.x),
-          y: Math.round(m.body.y),
-        })),
-        red: this.redMobs.filter((m) => m.body.active).slice(0, 6).map((m) => ({
-          x: Math.round(m.body.x),
-          y: Math.round(m.body.y),
-        })),
-      },
-    });
+    win.render_game_to_text = () => {
+      const snapshot: GameDebugSnapshot = {
+        note: "Origin top-left. X increases right. Y increases down. Mob Control cannon game.",
+        mode: this.mode,
+        cannon: this.cannon ? {
+          x: Math.round(this.cannon.body.x),
+          y: Math.round(this.cannon.body.y),
+          angleDegrees: Math.round(Phaser.Math.RadToDeg(this.cannonAngle)),
+        } : null,
+        runTimeSeconds: Math.floor(this.runTimeSeconds * 100) / 100,
+        distanceMeters: Math.floor(this.distanceMeters),
+        score: this.score,
+        wave: this.wave,
+        checkpointsDestroyed: this.checkpointsDestroyed,
+        cannonLives: this.cannonLives,
+        blueMobCount: this.blueMobs.length,
+        redMobCount: this.redMobs.length,
+        kills: this.kills,
+        bestScore: this.bestScore,
+        bestDistance: this.bestDistance,
+        coins: this.coins,
+        totalCoins: this.mode === "menu" ? loadTotalCoins() : this.totalCoins,
+        upgrades: this.mode === "menu" ? loadUpgradeState() : this.upgradeState,
+        powerups: serializePowerups(
+          this.powerups.map((p) => ({ id: p.id, kind: p.kind, x: p.x, y: p.y })),
+          this.shieldTimer,
+          this.rapidTimer,
+        ),
+        base: serializeBase(this.enemyBase),
+        barriers: serializeBarriers(this.barriers),
+        gates: serializeGates(this.gates),
+        visible: serializeVisibleMobs(this.blueMobs, this.redMobs),
+      };
+      return JSON.stringify(snapshot);
+    };
     win.advanceTime = (ms: number) => {
       const steps = Math.max(1, Math.round(ms / (1000 / 60)));
       for (let i = 0; i < steps; i += 1) {

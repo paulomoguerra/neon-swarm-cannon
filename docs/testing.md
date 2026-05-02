@@ -51,6 +51,8 @@ These hooks exist to support automated testing. **Do not remove them.** When cha
 | `main.ts` | Phaser Scene — input, rendering, orchestration, game loop |
 | `game/progression.ts` | localStorage reads/writes, upgrade/economy math |
 | `game/runMath.ts` | Pure endless-run formulas (wave, distance, score, red tuning) |
+| `game/uiText.ts` | Pure UI text formatting helpers (menu lines, HUD lines) |
+| `game/debugSnapshot.ts` | Debug snapshot types and entity serializer helpers |
 | `game/art.ts` | Phaser object factory functions |
 | `game/world.ts` | Background rendering |
 | `game/effects.ts` | Floating text, ring pulse effects |
