@@ -42,7 +42,7 @@ export function createCannon(scene: Phaser.Scene): Phaser.GameObjects.Container 
 // ─── Mobs ────────────────────────────────────────────────────────────────────
 
 const MOB_COLORS: Record<Team, { body: number; outline: number; glow: number }> = {
-  blue: { body: 0x3aaff5, outline: 0x0e6eb8, glow: 0x1a8ae8 },
+  blue: { body: 0x52c8ff, outline: 0x0a5aa0, glow: 0x1890e0 },
   red: { body: 0xf05050, outline: 0x8b1a1a, glow: 0xcc3030 },
 };
 
@@ -71,10 +71,10 @@ export function createGate(scene: Phaser.Scene, label: string, x: number, y: num
   const container = scene.add.container(x, y);
 
   // Glow backdrop behind gate
-  const glow = scene.add.rectangle(0, 0, width + 8, height + 8, 0x00c8ff, 0.18);
+  const glow = scene.add.rectangle(0, 0, width + 8, height + 8, 0x00c8ff, 0.12);
 
   // Translucent bright blue/cyan plate
-  const plate = scene.add.rectangle(0, 0, width, height, 0x00c8ff, 0.32);
+  const plate = scene.add.rectangle(0, 0, width, height, 0x00c8ff, 0.22);
   plate.setStrokeStyle(3, 0x00e5ff, 0.95);
 
   // White border highlight on top
@@ -129,7 +129,7 @@ export function createEnemyBase(scene: Phaser.Scene, x: number, y: number, hp: n
   container.add(towerHi);
 
   // HP bar background
-  const barBg = scene.add.rectangle(0, 38, 144, 12, 0x1a1a1a);
+  const barBg = scene.add.rectangle(0, 38, 144, 12, 0x141414);
   barBg.setStrokeStyle(1, 0x555555);
 
   // HP bar fill
@@ -140,11 +140,11 @@ export function createEnemyBase(scene: Phaser.Scene, x: number, y: number, hp: n
   // HP text label
   const hpText = scene.add.text(0, 38, `${hp}/${maxHp}`, {
     fontFamily: "Arial",
-    fontSize: "11px",
+    fontSize: "13px",
     color: "#ffffff",
     fontStyle: "bold",
     stroke: "#000000",
-    strokeThickness: 3,
+    strokeThickness: 4,
   }).setOrigin(0.5);
 
   // Store references for updates

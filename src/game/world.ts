@@ -32,13 +32,13 @@ export function drawWorld(
   drawBoardSlab(background);
 
   // Lane tracks — warm tan, cleaner alpha
-  background.fillStyle(0xd8b16d, 0.55);
+  background.fillStyle(0xd8b16d, 0.38);
   for (const laneX of LANES) {
-    drawProjectedStrip(background, laneX, 28, 514, 28, 0xd8b16d, 0.55);
+    drawProjectedStrip(background, laneX, 28, 514, 28, 0xd8b16d, 0.38);
   }
 
   // Subtle grass tufts — reduced density for less noise
-  background.fillStyle(0x3da344, 0.32);
+  background.fillStyle(0x3da344, 0.2);
   for (let y = -76 + (scrollOffset % 76); y < GAME_HEIGHT + 80; y += 88) {
     for (let x = 232; x < 730; x += 96) {
       const projectedX = projectX(x, y);
@@ -68,7 +68,7 @@ export function drawWorld(
   if (showHud) {
     uiGraphics.clear();
     // Single cohesive top HUD bar — dark, rounded, spans most of width
-    uiGraphics.fillStyle(0x0e2433, 0.85);
+    uiGraphics.fillStyle(0x0e2433, 0.72);
     uiGraphics.fillRoundedRect(12, 12, GAME_WIDTH - 24, 52, 12);
     uiGraphics.lineStyle(2, 0x3a6080, 0.7);
     uiGraphics.strokeRoundedRect(12, 12, GAME_WIDTH - 24, 52, 12);
