@@ -25,61 +25,28 @@ import {
   COIN_PER_BASE_DESTROY,
   UPGRADE_FIRE_COSTS,
   UPGRADE_LIVES_COSTS,
-  UPGRADE_FIRE_REDUCTION,
   UPGRADE_LIVES_BONUS,
   UPGRADE_MAX_LEVEL,
-  BASE_FIRE_INTERVAL,
-  BASE_STARTING_LIVES,
 } from "./game/config";
 import { drawWorld } from "./game/world";
 import { showFloatingText, showRingPulse } from "./game/effects";
+import {
+  loadBestScore,
+  loadBestDistance,
+  saveBestScore,
+  saveBestDistance,
+  updateBestScore,
+  loadTotalCoins,
+  saveTotalCoins,
+  loadUpgradeState,
+  saveUpgradeState,
+  effectiveFireInterval,
+  startingLivesFromUpgrades,
+} from "./game/progression";
+import { calculateWave, calculateDistanceDelta, calculateScore, calculateRedSpawnInterval, calculateRedSpeed } from "./game/runMath";
 import type { Cannon, Gate, Mob, Mode, EnemyBase, Barrier, Powerup, PowerupKind, UpgradeState } from "./game/types";
 import type { ShopResult } from "./game/debugHooks";
 import "./styles.css";
-
-// --- LocalStorage helpers for best score ---
-function loadBestScore(): number {
-  try { return parseInt(localStorage.getItem("mobCannon_bestScore") || "0", 10) || 0; } catch { return 0; }
-}
-function loadBestDistance(): number {
-  try { return parseInt(localStorage.getItem("mobCannon_bestDistance") || "0", 10) || 0; } catch { return 0; }
-}
-function saveBestScore(v: number): void {
-  try { localStorage.setItem("mobCannon_bestScore", String(v)); } catch { /* noop */ }
-}
-function saveBestDistance(v: number): void {
-  try { localStorage.setItem("mobCannon_bestDistance", String(v)); } catch { /* noop */ }
-}
-function updateBestScore(score: number, distance: number): void {
-  const cur = loadBestScore();
-  const curd = loadBestDistance();
-  if (score > cur) saveBestScore(score);
-  if (distance > curd) saveBestDistance(distance);
-}
-
-// --- Coin / upgrade localStorage helpers ---
-function loadTotalCoins(): number {
-  try { return parseInt(localStorage.getItem("mobCannon_totalCoins") || "0", 10) || 0; } catch { return 0; }
-}
-function saveTotalCoins(v: number): void {
-  try { localStorage.setItem("mobCannon_totalCoins", String(v)); } catch { /* noop */ }
-}
-function loadUpgradeState(): UpgradeState {
-  try {
-    const raw = localStorage.getItem("mobCannon_upgrades");
-    if (raw) return JSON.parse(raw) as UpgradeState;
-  } catch { /* noop */ }
-  return { fireLevel: 0, livesLevel: 0 };
-}
-function saveUpgradeState(s: UpgradeState): void {
-  try { localStorage.setItem("mobCannon_upgrades", JSON.stringify(s)); } catch { /* noop */ }
-}
-function effectiveFireInterval(upgrades: UpgradeState): number {
-  return Math.max(0.10, BASE_FIRE_INTERVAL - upgrades.fireLevel * UPGRADE_FIRE_REDUCTION);
-}
-function startingLivesFromUpgrades(upgrades: UpgradeState): number {
-  return BASE_STARTING_LIVES + upgrades.livesLevel * UPGRADE_LIVES_BONUS;
-}
 
 class GameScene extends Phaser.Scene {
   private mode: Mode = "menu";
@@ -495,9 +462,9 @@ class GameScene extends Phaser.Scene {
 
     // Endless run state
     this.runTimeSeconds += dt;
-    this.wave = 1 + Math.floor(this.runTimeSeconds / ENDLESS_TUNING.waveDuration);
-    this.distanceMeters += dt * (ENDLESS_TUNING.baseDistancePerSecond + Math.min(this.runTimeSeconds * ENDLESS_TUNING.distanceBonusPerSecond, ENDLESS_TUNING.maxDistanceBonus));
-    this.score = Math.floor(this.distanceMeters * ENDLESS_TUNING.scorePerDistance + this.kills * ENDLESS_TUNING.scorePerKill + this.checkpointsDestroyed * ENDLESS_TUNING.scorePerCheckpoint);
+    this.wave = calculateWave(this.runTimeSeconds);
+    this.distanceMeters += calculateDistanceDelta(this.runTimeSeconds, dt);
+    this.score = calculateScore(this.distanceMeters, this.kills, this.checkpointsDestroyed);
 
     // Live best tracking — update session fields directly to avoid per-frame localStorage reads
     const distFloor = Math.floor(this.distanceMeters);
@@ -511,10 +478,8 @@ class GameScene extends Phaser.Scene {
     }
 
     // Dynamic red mob tuning based on wave
-    // Use (wave-1) so wave 1 starts at baseline, not already escalated
-    const waveIdx = this.wave - 1;
-    const dynamicRedSpawnInterval = Math.max(ENDLESS_TUNING.redSpawnIntervalMin, ENDLESS_TUNING.redSpawnIntervalStart - waveIdx * ENDLESS_TUNING.redSpawnIntervalDecay);
-    const dynamicRedSpeed = MOB_TUNING.redSpeed + Math.min(waveIdx * ENDLESS_TUNING.redSpeedPerWave, ENDLESS_TUNING.redSpeedMaxBonus);
+    const dynamicRedSpawnInterval = calculateRedSpawnInterval(this.wave);
+    const dynamicRedSpeed = calculateRedSpeed(this.wave);
 
     // Auto-fire blue mobs from cannon
     if (this.cannon) {

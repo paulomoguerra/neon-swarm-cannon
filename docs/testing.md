@@ -45,5 +45,18 @@ These hooks exist to support automated testing. **Do not remove them.** When cha
 - `main.ts` extraction into systems is out of scope for hardening patches
 - Balance, spawn rates, controls, shop costs, and visuals should not change during hardening
 
+### Module Boundaries (Phase 2+)
+| Module | Responsibility |
+|---|---|
+| `main.ts` | Phaser Scene — input, rendering, orchestration, game loop |
+| `game/progression.ts` | localStorage reads/writes, upgrade/economy math |
+| `game/runMath.ts` | Pure endless-run formulas (wave, distance, score, red tuning) |
+| `game/art.ts` | Phaser object factory functions |
+| `game/world.ts` | Background rendering |
+| `game/effects.ts` | Floating text, ring pulse effects |
+| `game/debugHooks.ts` | Debug hook exports (`render_game_to_text`, `advanceTime`, `debug_shop_action`) |
+| `game/config.ts` | All tuning constants |
+| `game/types.ts` | Shared TypeScript types |
+
 ### Rule of Thumb
 > If a patch touches gameplay logic, smoke tests must pass before handoff.
