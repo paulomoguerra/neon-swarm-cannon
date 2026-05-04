@@ -29,7 +29,7 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 
 **Mobile viewport (3 tests, 393x852 — iPhone 14 Pro):**
 
-- Canvas renders with nonzero dimensions under mobile viewport
+- Canvas renders with nonzero dimensions under mobile viewport and remains portrait-first (height > width)
 - Mobile tap on canvas starts a run (mode transitions to "playing")
 - Mobile horizontal drag moves cannon horizontally; cannon angle stays at -90°
 

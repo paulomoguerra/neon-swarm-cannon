@@ -129,6 +129,7 @@ class GameScene extends Phaser.Scene {
   private uiGraphics!: Phaser.GameObjects.Graphics;
   private overlayDim!: Phaser.GameObjects.Graphics;
   private endCard!: Phaser.GameObjects.Graphics;
+  private menuPanel!: Phaser.GameObjects.Graphics;
   private promptButton!: Phaser.GameObjects.Graphics;
   private endPromptButton!: Phaser.GameObjects.Graphics;
   private upgradeFireBg!: Phaser.GameObjects.Graphics;
@@ -148,8 +149,8 @@ class GameScene extends Phaser.Scene {
   private cannonAngleText!: Phaser.GameObjects.Text;
   private touchHintText!: Phaser.GameObjects.Text;
   private scrollOffset = 0;
-  // Position constants for prompt text centering
-  private static readonly MENU_PROMPT_Y = 378;
+  // Position constants for prompt text centering — portrait thumb-zone optimized
+  private static readonly MENU_PROMPT_Y = 468;
   private static readonly END_RESTART_PROMPT_Y = 370;
   private promptTween?: Phaser.Tweens.Tween;
 
@@ -175,6 +176,11 @@ class GameScene extends Phaser.Scene {
     this.endCard.setDepth(106);
     this.endCard.setVisible(false);
 
+    // Menu dark panel — full-width behind menu content for portrait readability
+    this.menuPanel = this.add.graphics();
+    this.menuPanel.setDepth(108);
+    this.menuPanel.setVisible(false);
+
     // Menu CTA button (rounded rectangle behind prompt text) — hidden while playing
     this.promptButton = this.add.graphics();
     this.promptButton.setDepth(109);
@@ -193,10 +199,10 @@ class GameScene extends Phaser.Scene {
     this.upgradeLivesBg.setDepth(109);
     this.upgradeLivesBg.setVisible(false);
 
-    // Title — styled with stroke and shadow for arcade feel
-    this.titleText = this.add.text(GAME_WIDTH / 2, 78, "MOB CANNON", {
+    // Title — styled with stroke and shadow for arcade feel — portrait upper area
+    this.titleText = this.add.text(GAME_WIDTH / 2, 52, "MOB CANNON", {
       fontFamily: "Arial",
-      fontSize: "56px",
+      fontSize: "48px",
       color: "#ffffff",
       fontStyle: "bold",
       stroke: "#004488",
@@ -205,9 +211,9 @@ class GameScene extends Phaser.Scene {
     this.titleText.setDepth(110);
 
     // Subtitle — "ENDLESS ARCADE SURVIVAL"
-    this.subtitleText = this.add.text(GAME_WIDTH / 2, 126, "ENDLESS ARCADE SURVIVAL", {
+    this.subtitleText = this.add.text(GAME_WIDTH / 2, 96, "ENDLESS ARCADE SURVIVAL", {
       fontFamily: "Arial",
-      fontSize: "15px",
+      fontSize: "13px",
       color: "#f0c840",
       fontStyle: "bold",
       stroke: "#000000",
@@ -216,9 +222,9 @@ class GameScene extends Phaser.Scene {
     this.subtitleText.setDepth(110);
 
     // Best score text (shown on menu)
-    this.bestScoreText = this.add.text(GAME_WIDTH / 2, 152, "", {
+    this.bestScoreText = this.add.text(GAME_WIDTH / 2, 116, "", {
       fontFamily: "Arial",
-      fontSize: "13px",
+      fontSize: "12px",
       color: "#b0d8ff",
       fontStyle: "bold",
       stroke: "#000000",
@@ -262,7 +268,7 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(1, 0);
     this.livesText.setDepth(110);
 
-    // Angle indicator
+    // Angle indicator — bottom-right for portrait
     this.cannonAngleText = this.add.text(GAME_WIDTH - 22, GAME_HEIGHT - 12, "", {
       fontFamily: "Arial",
       fontSize: "13px",
@@ -271,8 +277,8 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(1, 1);
     this.cannonAngleText.setDepth(110);
 
-    // Coins display (shown below best score on menu)
-    this.coinsText = this.add.text(GAME_WIDTH / 2, 168, "", {
+    // Coins display (shown below best score on menu) — compact pill for portrait
+    this.coinsText = this.add.text(GAME_WIDTH / 2, 134, "", {
       fontFamily: "Arial",
       fontSize: "13px",
       color: "#ffd700",
@@ -294,10 +300,10 @@ class GameScene extends Phaser.Scene {
     this.touchHintText.setDepth(110);
     this.touchHintText.setVisible(false);
 
-    // Upgrade buttons (shown on menu below coins)
-    this.upgradeFireText = this.add.text(GAME_WIDTH / 2, 190, "", {
+    // Upgrade buttons (shown on menu below coins) — larger font for mobile touch
+    this.upgradeFireText = this.add.text(GAME_WIDTH / 2, UPGRADE_FIRE_BY + UPGRADE_BH / 2, "", {
       fontFamily: "Arial",
-      fontSize: "12px",
+      fontSize: "14px",
       color: "#aaddff",
       fontStyle: "bold",
       stroke: "#000000",
@@ -305,9 +311,9 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.upgradeFireText.setDepth(110);
 
-    this.upgradeLivesText = this.add.text(GAME_WIDTH / 2, 240, "", {
+    this.upgradeLivesText = this.add.text(GAME_WIDTH / 2, UPGRADE_LIVES_BY + UPGRADE_BH / 2, "", {
       fontFamily: "Arial",
-      fontSize: "12px",
+      fontSize: "14px",
       color: "#ffaaaa",
       fontStyle: "bold",
       stroke: "#000000",
@@ -324,10 +330,10 @@ class GameScene extends Phaser.Scene {
     });
     this.powerupStatusText.setDepth(110);
 
-    // Prompt text — used for both menu CTA and end-state restart
-    this.promptText = this.add.text(GAME_WIDTH / 2, 390, "START RUN", {
+    // Prompt text — used for both menu CTA and end-state restart — larger for mobile
+    this.promptText = this.add.text(GAME_WIDTH / 2, 468, "START RUN", {
       fontFamily: "Arial",
-      fontSize: "22px",
+      fontSize: "26px",
       color: "#ffffff",
       fontStyle: "bold",
       stroke: "#000000",
@@ -369,22 +375,36 @@ class GameScene extends Phaser.Scene {
     this.renderMenuState();
   }
 
-  // Draw the menu CTA button (rounded rect behind promptText)
+  // Draw the menu CTA button (rounded rect behind promptText) — thumb-zone sized
   private drawMenuPromptButton(): void {
     this.promptButton.clear();
-    const bw = 240;
-    const bh = 54;
+    const bw = 260;
+    const bh = 62;
     const bx = GAME_WIDTH / 2 - bw / 2;
-    const by = 378 - bh / 2;
+    const by = 468 - bh / 2;
     // Shadow
     this.promptButton.fillStyle(0x000000, 0.35);
-    this.promptButton.fillRoundedRect(bx + 3, by + 4, bw, bh, 14);
+    this.promptButton.fillRoundedRect(bx + 3, by + 4, bw, bh, 16);
     // Button body
     this.promptButton.fillStyle(0xf0b840, 0.95);
-    this.promptButton.fillRoundedRect(bx, by, bw, bh, 14);
+    this.promptButton.fillRoundedRect(bx, by, bw, bh, 16);
     // Border
     this.promptButton.lineStyle(2, 0xffffff, 0.6);
-    this.promptButton.strokeRoundedRect(bx, by, bw, bh, 14);
+    this.promptButton.strokeRoundedRect(bx, by, bw, bh, 16);
+  }
+
+  // Draw a dark semi-transparent panel behind menu content for readability on mobile
+  private drawMenuPanel(): void {
+    this.menuPanel.clear();
+    // Panel spans the full menu content area, from title down to START button
+    const panelX = 20;
+    const panelY = 28;
+    const panelW = GAME_WIDTH - 40;
+    const panelH = 500; // tall enough to cover all menu elements
+    this.menuPanel.fillStyle(0x071218, 0.72);
+    this.menuPanel.fillRoundedRect(panelX, panelY, panelW, panelH, 16);
+    this.menuPanel.lineStyle(2, 0x3a6080, 0.55);
+    this.menuPanel.strokeRoundedRect(panelX, panelY, panelW, panelH, 16);
   }
 
   // Draw an upgrade button background (fire or lives) on the menu
@@ -486,6 +506,7 @@ class GameScene extends Phaser.Scene {
     this.promptText.setVisible(false);
     this.stopPromptPulse();
     this.promptButton.setVisible(false);
+    this.menuPanel.setVisible(false);
     this.upgradeFireBg.setVisible(false);
     this.upgradeLivesBg.setVisible(false);
     this.upgradeFireText.setVisible(false);
@@ -989,8 +1010,8 @@ class GameScene extends Phaser.Scene {
 
   private spawnRedMob(speed: number): void {
     if (this.redMobs.length >= MOB_TUNING.maxRedMobs) return;
-    // Spawn near top of board, random X within the play area
-    const laneXs = [250, 340, 430, 520, 610, 700];
+    // Spawn near top of board, random X within the play area — scaled for portrait
+    const laneXs = [141, 191, 242, 293, 344, 395];
     const x = laneXs[Phaser.Math.Between(0, laneXs.length - 1)];
     const y = -30;
     const body = createMob(this, "red", x, y);
@@ -1255,17 +1276,19 @@ class GameScene extends Phaser.Scene {
       // Sync in-memory upgrade state from localStorage so upgrades persist across reloads
       this.upgradeState = loadUpgradeState();
       this.totalCoins = loadTotalCoins();
+      this.drawMenuPanel();
       this.drawMenuPromptButton();
       this.drawUpgradeButtonBg("fire");
       this.drawUpgradeButtonBg("lives");
+      this.menuPanel.setVisible(true);
       this.upgradeFireBg.setVisible(true);
       this.upgradeLivesBg.setVisible(true);
       this.titleText.setText("MOB CANNON").setVisible(true);
-      this.titleText.setPosition(GAME_WIDTH / 2, 78);
+      this.titleText.setPosition(GAME_WIDTH / 2, 52);
       this.subtitleText.setText("ENDLESS ARCADE SURVIVAL").setVisible(true);
-      this.subtitleText.setPosition(GAME_WIDTH / 2, 126);
+      this.subtitleText.setPosition(GAME_WIDTH / 2, 96);
       // Show best score on menu
-      this.bestScoreText.setPosition(GAME_WIDTH / 2, 152);
+      this.bestScoreText.setPosition(GAME_WIDTH / 2, 116);
       updateMenuHud(
         {
           bestScoreText: this.bestScoreText,
@@ -1279,7 +1302,7 @@ class GameScene extends Phaser.Scene {
           cannonAngleText: this.cannonAngleText,
           powerupStatusText: this.powerupStatusText,
         },
-        { bestScoreTextX: GAME_WIDTH / 2, bestScoreTextY: 152 }
+        { bestScoreTextX: GAME_WIDTH / 2, bestScoreTextY: 116 }
       );
       this.promptText.setText("START RUN").setVisible(true);
       this.promptText.y = GameScene.MENU_PROMPT_Y;
@@ -1299,7 +1322,7 @@ class GameScene extends Phaser.Scene {
   }
 
   private spawnPowerup(): void {
-    const laneXs = [280, 360, 440, 520, 600, 680];
+    const laneXs = [158, 191, 242, 293, 344, 382];
     const x = laneXs[Phaser.Math.Between(0, laneXs.length - 1)];
     const kind: PowerupKind = Phaser.Math.Between(0, 1) === 0 ? "shield" : "rapid";
     const body = createPowerup(this, kind, x, -40);

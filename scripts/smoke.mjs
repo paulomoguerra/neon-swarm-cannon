@@ -414,7 +414,7 @@ async function testDebugMoveCannonToX(page) {
   const xBefore = initial.cannon.x;
 
   // Move cannon to a target X to the right
-  const targetX = Math.min(xBefore + 80, 720); // CANNON_MAX_X = 720
+  const targetX = Math.min(xBefore + 80, 405); // CANNON_MAX_X = 405
   await page.evaluate(
     (tx) => window.debug_move_cannon_to_x(tx, 300),
     targetX
@@ -438,7 +438,7 @@ async function testDebugMoveCannonToX(page) {
   console.log(`  [PASS] debug_move_cannon_to_x moves cannon right (${xBefore} -> ${stateAfter.cannon.x}), angle stays ${stateAfter.cannon.angleDegrees}`);
 
   // Move back to the left using debug_move_cannon_to_x
-  const leftTarget = Math.max(xBefore, 240); // CANNON_MIN_X = 240
+  const leftTarget = Math.max(xBefore, 135); // CANNON_MIN_X = 135
   await page.evaluate(
     (tx) => window.debug_move_cannon_to_x(tx, 300),
     leftTarget
@@ -487,6 +487,10 @@ async function testMobileCanvasVisible(page) {
   assert(box !== null && box.width > 0 && box.height > 0,
     `Canvas must have nonzero dimensions under mobile viewport, got ${JSON.stringify(box)}`);
   console.log(`  [PASS] canvas visible at mobile viewport: ${Math.round(box.width)}x${Math.round(box.height)}`);
+  // Assert portrait aspect — mobile viewports should show the game taller than wide
+  assert(box.height > box.width,
+    `Canvas should be portrait (height ${Math.round(box.height)} > width ${Math.round(box.width)})`);
+  console.log(`  [PASS] canvas is portrait-first: ${Math.round(box.height)}x${Math.round(box.width)} (height > width)`);
 }
 
 async function testMobileTapStartsRun(page) {
