@@ -1,8 +1,6 @@
 import Phaser from "phaser";
 import { createCannon, createMob, createGate, createEnemyBase, updateEnemyBaseVisual, createBarrier, updateBarrierVisual, createPowerup } from "./game/art";
 import {
-  CANNON_ANGLE_MAX,
-  CANNON_ANGLE_MIN,
   CANNON_MUZZLE_OFFSET,
   CANNON_X,
   CANNON_Y,
@@ -13,9 +11,6 @@ import {
   MOB_TUNING,
   ENEMY_BASE_CONFIG,
   ENDLESS_TUNING,
-  CANNON_MIN_X,
-  CANNON_MAX_X,
-  KEYBOARD_CANNON_SPEED,
   POWERUP_SPAWN_INTERVAL,
   POWERUP_FALL_SPEED,
   SHIELD_DURATION,
@@ -57,7 +52,7 @@ import {
   formatFireUpgradeLine,
   formatLivesUpgradeLine,
 } from "./game/uiText";
-import { resolveMenuPointer, clampCannonX, MENU_UPGRADE_BOUNDS } from "./game/inputSystem";
+import { resolveMenuPointer, clampCannonX, stepKeyboardCannon, MENU_UPGRADE_BOUNDS } from "./game/inputSystem";
 import { updatePlayingHud, clearPlayingHud, updateMenuHud } from "./game/hudSystem";
 import {
   serializePowerups,
@@ -494,23 +489,23 @@ class GameScene extends Phaser.Scene {
 
     // Keyboard cannon movement (ArrowLeft/A = left, ArrowRight/D = right)
     if (this.cannon) {
-      const dx = (this.keyRight ? 1 : 0) - (this.keyLeft ? 1 : 0);
-      if (dx !== 0) {
-        const newX = Phaser.Math.Clamp(
-          this.cannon.body.x + dx * KEYBOARD_CANNON_SPEED * dt,
-          CANNON_MIN_X,
-          CANNON_MAX_X,
+      // Only update target when keyboard is actively pressed; otherwise preserve
+      // the existing target so the lerp can continue moving toward it (e.g., after drag).
+      if (this.keyLeft || this.keyRight) {
+        this.cannonTargetX = stepKeyboardCannon(
+          this.cannon.body.x,
+          this.keyLeft,
+          this.keyRight,
+          dt
         );
-        this.cannonTargetX = newX;
       }
       // Smooth follow toward target X
       const diff = this.cannonTargetX - this.cannon.body.x;
       if (Math.abs(diff) > 0.1) {
         const lerpSpeed = 14; // higher = snappier, ~14 means ~reachable in ~0.1s
         const newBodyX = this.cannon.body.x + diff * lerpSpeed * dt;
-        const clampedX = Phaser.Math.Clamp(newBodyX, CANNON_MIN_X, CANNON_MAX_X);
-        this.cannon.body.x = clampedX;
-        this.cannon.x = clampedX;
+        this.cannon.body.x = clampCannonX(newBodyX);
+        this.cannon.x = this.cannon.body.x;
       } else {
         this.cannon.body.x = this.cannonTargetX;
         this.cannon.x = this.cannonTargetX;
@@ -953,7 +948,7 @@ class GameScene extends Phaser.Scene {
 
   private moveCannonToX(targetX: number): void {
     if (!this.cannon) return;
-    this.cannonTargetX = Phaser.Math.Clamp(targetX, CANNON_MIN_X, CANNON_MAX_X);
+    this.cannonTargetX = clampCannonX(targetX);
   }
 
   private spawnBlueMob(): void {
