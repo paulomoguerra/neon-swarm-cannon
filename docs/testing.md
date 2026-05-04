@@ -27,6 +27,12 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 - Game over state is stable (no crash, canvas present, hooks respond)
 - Deterministic gameover/restart via `debug_force_gameover` hook
 
+**Mobile viewport (3 tests, 393x852 — iPhone 14 Pro):**
+
+- Canvas renders with nonzero dimensions under mobile viewport
+- Mobile tap on canvas starts a run (mode transitions to "playing")
+- Mobile horizontal drag moves cannon horizontally; cannon angle stays at -90°
+
 ## Debug Hooks
 
 The game exposes five test hooks on `window`:

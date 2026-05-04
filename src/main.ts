@@ -360,6 +360,8 @@ class GameScene extends Phaser.Scene {
       }
     });
     this.input.on("pointerup", () => { this.isDragging = false; });
+    this.input.on("pointercancel", () => { this.isDragging = false; });
+    this.input.on("pointerout", () => { this.isDragging = false; });
 
     this.drawScene();
     this.updateHud();

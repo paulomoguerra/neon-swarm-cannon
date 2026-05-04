@@ -458,6 +458,122 @@ async function testDebugMoveCannonToX(page) {
   console.log(`  [PASS] debug_move_cannon_to_x moves cannon left (back to ~${stateLeft.cannon.x}), angle stays ${stateLeft.cannon.angleDegrees}`);
 }
 
+// --- Mobile viewport smoke ---
+
+async function withMobilePage(url, fn) {
+  // iPhone 14 Pro dimensions — representative mobile viewport
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext({
+      viewport: { width: 393, height: 852 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: "networkidle", timeout: 15_000 });
+    await fn(page);
+    await context.close();
+  } finally {
+    await browser.close();
+  }
+}
+
+async function testMobileCanvasVisible(page) {
+  await page.waitForSelector("canvas", { timeout: 10_000 });
+  const canvas = await page.$("canvas");
+  assert(canvas !== null, "Canvas element must be present under mobile viewport");
+  const box = await canvas.boundingBox();
+  assert(box !== null && box.width > 0 && box.height > 0,
+    `Canvas must have nonzero dimensions under mobile viewport, got ${JSON.stringify(box)}`);
+  console.log(`  [PASS] canvas visible at mobile viewport: ${Math.round(box.width)}x${Math.round(box.height)}`);
+}
+
+async function testMobileTapStartsRun(page) {
+  await page.waitForSelector("canvas", { timeout: 10_000 });
+  // Wait for menu to be ready
+  await page.waitForTimeout(500);
+
+  // Tap the canvas center — this should start the run (like pressing Space)
+  const canvas = await page.$("canvas");
+  const box = await canvas.boundingBox();
+  assert(box !== null, "canvas must have bounding box");
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+
+  await page.touchscreen.tap(cx, cy);
+  await page.waitForTimeout(600);
+
+  const state = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(state.mode === "playing", `Expected mode 'playing' after mobile tap, got '${state.mode}'`);
+  console.log("  [PASS] mobile tap starts run (mode=playing)");
+}
+
+async function testMobileDragMovesCannon(page) {
+  await page.waitForSelector("canvas", { timeout: 10_000 });
+  // Start the run first
+  await page.touchscreen.tap(box => {
+    const canvas = document.querySelector("canvas");
+    const b = canvas.getBoundingClientRect();
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  }).catch(() => {});
+  // Fallback: use Space to start
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(600);
+
+  const stateBefore = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(stateBefore.mode === "playing", `Must be in playing mode for drag test, got '${stateBefore.mode}'`);
+  assert(stateBefore.cannon !== null, "cannon must exist during play");
+  const xBefore = stateBefore.cannon.x;
+
+  // Perform a touch drag from center toward the right side of the canvas
+  const canvas = await page.$("canvas");
+  const box = await canvas.boundingBox();
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  const dragLen = 60;
+  // drag right
+  await page.touchscreen.tap(cx, cy);
+  await page.waitForTimeout(100);
+  // Use mouse in touch emulation mode to simulate drag since touchscreen.tap doesn't support move
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + dragLen, cy, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+
+  const stateAfter = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(stateAfter.cannon !== null, "cannon must still exist after drag");
+  assert(
+    stateAfter.cannon.x > xBefore,
+    `After right drag: cannon.x should increase (was ${xBefore}, got ${stateAfter.cannon.x})`
+  );
+  assert(
+    stateAfter.cannon.angleDegrees === -90,
+    `After drag: angle must stay -90, got ${stateAfter.cannon.angleDegrees}`
+  );
+  console.log(`  [PASS] mobile drag moves cannon horizontally (${xBefore} -> ${stateAfter.cannon.x}), angle stays -90`);
+
+  // Test drag left
+  const xBeforeLeft = stateAfter.cannon.x;
+  await page.mouse.move(cx + dragLen, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx, cy, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+
+  const stateLeft = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(
+    stateLeft.cannon.x < xBeforeLeft,
+    `After left drag: cannon.x should decrease (was ${xBeforeLeft}, got ${stateLeft.cannon.x})`
+  );
+  assert(
+    stateLeft.cannon.angleDegrees === -90,
+    `After left drag: angle must stay -90, got ${stateLeft.cannon.angleDegrees}`
+  );
+  console.log(`  [PASS] mobile left drag moves cannon (${xBeforeLeft} -> ${stateLeft.cannon.x}), angle stays -90`);
+}
+
 // --- Main ---
 
 async function main() {
@@ -572,6 +688,37 @@ async function main() {
       } catch (e) {
         failed++;
         errors.push({ test: "debug_force_gameover hook", error: e.message });
+        throw e;
+      }
+
+      // --- Mobile viewport smoke (separate context, same server) ---
+      try {
+        console.log("[TEST] Mobile — canvas visible at 393x852 viewport");
+        await withMobilePage(DEV_URL, testMobileCanvasVisible);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "Mobile — canvas visible", error: e.message });
+        throw e;
+      }
+
+      try {
+        console.log("[TEST] Mobile — tap starts run");
+        await withMobilePage(DEV_URL, testMobileTapStartsRun);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "Mobile — tap starts run", error: e.message });
+        throw e;
+      }
+
+      try {
+        console.log("[TEST] Mobile — drag moves cannon, angle stays -90");
+        await withMobilePage(DEV_URL, testMobileDragMovesCannon);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "Mobile — drag moves cannon", error: e.message });
         throw e;
       }
     });
