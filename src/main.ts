@@ -1250,6 +1250,9 @@ class GameScene extends Phaser.Scene {
 
   private renderMenuState(): void {
     if (this.mode === "menu") {
+      // Sync in-memory upgrade state from localStorage so upgrades persist across reloads
+      this.upgradeState = loadUpgradeState();
+      this.totalCoins = loadTotalCoins();
       this.drawMenuPromptButton();
       this.drawUpgradeButtonBg("fire");
       this.drawUpgradeButtonBg("lives");

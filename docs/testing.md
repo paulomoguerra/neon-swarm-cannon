@@ -20,6 +20,7 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 - Debug hooks `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x` are present
 - Shop upgrades correctly deduct coins and increment upgrade levels
 - Shop purchase with insufficient coins is a no-op (coins/levels unchanged); exact-coin purchase succeeds; zero-coin purchase fails safely (idempotent)
+- Shop purchase at max upgrade level is a no-op (coins and levels unchanged)
 - Starting a run and advancing simulation time produces valid game state
 - Cannon forward-only invariant is maintained (angle = -90 degrees, horizontal movement works)
 - Cannon movement via `debug_move_cannon_to_x` hook works correctly

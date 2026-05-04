@@ -205,6 +205,58 @@ async function testShopInsufficientCoins(page) {
   console.log("  [PASS] insufficient-coins purchase is idempotent: coins/lvls unchanged, exact-buy succeeds, zero-coin fails safely");
 }
 
+async function testMaxUpgradeIdempotency(page) {
+  // Seed localStorage with both upgrades at max level (3) and 999 coins
+  await page.evaluate(() => {
+    localStorage.setItem("mobCannon_totalCoins", "999");
+    localStorage.setItem("mobCannon_upgrades", JSON.stringify({ fireLevel: 3, livesLevel: 3 }));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForSelector("canvas", { timeout: 10_000 });
+  // Wait for game to read localStorage state (both upgrades at max)
+  await page.waitForFunction(
+    () => {
+      try {
+        const state = JSON.parse(window.render_game_to_text());
+        return state.upgrades.fireLevel === 3 && state.upgrades.livesLevel === 3 && state.totalCoins === 999;
+      } catch {
+        return false;
+      }
+    },
+    { timeout: 10_000 }
+  );
+
+  // Trying to buy fire at max level must be a no-op
+  const resultFire = await page.evaluate(() => {
+    return window.debug_shop_action("fire");
+  });
+  assert(resultFire !== null, "debug_shop_action('fire') returned null at max level");
+  assert(
+    resultFire.upgrades.fireLevel === 3,
+    `fireLevel must stay 3 at max, got ${resultFire.upgrades.fireLevel}`
+  );
+  assert(
+    resultFire.totalCoins === 999,
+    `Coins must stay 999 when fire is maxed, got ${resultFire.totalCoins}`
+  );
+
+  // Trying to buy lives at max level must also be a no-op
+  const resultLives = await page.evaluate(() => {
+    return window.debug_shop_action("lives");
+  });
+  assert(resultLives !== null, "debug_shop_action('lives') returned null at max level");
+  assert(
+    resultLives.upgrades.livesLevel === 3,
+    `livesLevel must stay 3 at max, got ${resultLives.upgrades.livesLevel}`
+  );
+  assert(
+    resultLives.totalCoins === 999,
+    `Coins must stay 999 when lives is maxed, got ${resultLives.totalCoins}`
+  );
+
+  console.log("  [PASS] max upgrade idempotency: fire and lives at level 3, coins stay 999, no-op on buy attempts");
+}
+
 async function testStartRunAndAdvance(page) {
   // Trigger start (Space key)
   await page.keyboard.press("Space");
@@ -442,6 +494,16 @@ async function main() {
       } catch (e) {
         failed++;
         errors.push({ test: "Shop — insufficient coins / idempotency", error: e.message });
+        throw e;
+      }
+
+      try {
+        console.log("[TEST] Max upgrade — idempotency at level cap");
+        await testMaxUpgradeIdempotency(page);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "Max upgrade — idempotency at level cap", error: e.message });
         throw e;
       }
 
