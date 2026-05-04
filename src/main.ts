@@ -28,6 +28,10 @@ import {
   UPGRADE_LIVES_COSTS,
   UPGRADE_LIVES_BONUS,
   UPGRADE_MAX_LEVEL,
+  UPGRADE_BW,
+  UPGRADE_BH,
+  UPGRADE_FIRE_BY,
+  UPGRADE_LIVES_BY,
 } from "./game/config";
 import { drawWorld } from "./game/world";
 import { showFloatingText, showRingPulse } from "./game/effects";
@@ -52,12 +56,9 @@ import {
   formatCoinsLine,
   formatFireUpgradeLine,
   formatLivesUpgradeLine,
-  formatHudLeft,
-  formatHudCenter,
-  formatHudRight,
-  formatLivesLine,
-  formatPowerupStatus,
 } from "./game/uiText";
+import { resolveMenuPointer, clampCannonX, MENU_UPGRADE_BOUNDS } from "./game/inputSystem";
+import { updatePlayingHud, clearPlayingHud, updateMenuHud } from "./game/hudSystem";
 import {
   serializePowerups,
   serializeBase,
@@ -156,13 +157,6 @@ class GameScene extends Phaser.Scene {
   private static readonly MENU_PROMPT_Y = 378;
   private static readonly END_RESTART_PROMPT_Y = 370;
   private promptTween?: Phaser.Tweens.Tween;
-
-  // Upgrade button bounds (menu only) — touch-friendly: taller + more spacing
-  private static readonly UPGRADE_BW = 300;
-  private static readonly UPGRADE_BH = 40;
-  private static readonly UPGRADE_FIRE_BY = 170;
-  private static readonly UPGRADE_LIVES_BY = 220;
-  private static readonly UPGRADE_BX = GAME_WIDTH / 2 - GameScene.UPGRADE_BW / 2;
 
   constructor() {
     super("game");
@@ -399,7 +393,7 @@ class GameScene extends Phaser.Scene {
   // Draw an upgrade button background (fire or lives) on the menu
   private drawUpgradeButtonBg(which: "fire" | "lives"): void {
     const bg = which === "fire" ? this.upgradeFireBg : this.upgradeLivesBg;
-    const by = which === "fire" ? GameScene.UPGRADE_FIRE_BY : GameScene.UPGRADE_LIVES_BY;
+    const by = which === "fire" ? UPGRADE_FIRE_BY : UPGRADE_LIVES_BY;
     const ups = loadUpgradeState();
     const tc = loadTotalCoins();
     const maxed = which === "fire" ? ups.fireLevel >= UPGRADE_MAX_LEVEL : ups.livesLevel >= UPGRADE_MAX_LEVEL;
@@ -409,9 +403,9 @@ class GameScene extends Phaser.Scene {
     const canAfford = !maxed && tc >= cost;
 
     bg.clear();
-    const bx = GameScene.UPGRADE_BX;
-    const bw = GameScene.UPGRADE_BW;
-    const bh = GameScene.UPGRADE_BH;
+    const bx = GAME_WIDTH / 2 - UPGRADE_BW / 2;
+    const bw = UPGRADE_BW;
+    const bh = UPGRADE_BH;
 
     // Shadow
     bg.fillStyle(0x000000, 0.3);
@@ -938,23 +932,12 @@ class GameScene extends Phaser.Scene {
 
   private handlePointer(pointer: Phaser.Input.Pointer): void {
     if (this.mode === "menu") {
-      // Check upgrade button hits first
-      const px = pointer.x;
-      const py = pointer.y;
-      const bx = GameScene.UPGRADE_BX;
-      const bw = GameScene.UPGRADE_BW;
-      const fireBy = GameScene.UPGRADE_FIRE_BY;
-      const livesBy = GameScene.UPGRADE_LIVES_BY;
-      const bh = GameScene.UPGRADE_BH;
-      if (px >= bx && px <= bx + bw && py >= fireBy && py <= fireBy + bh) {
-        this.handleUpgradeKey("fire");
+      const result = resolveMenuPointer(pointer.x, pointer.y, MENU_UPGRADE_BOUNDS);
+      if (result === "fire" || result === "lives") {
+        this.handleUpgradeKey(result);
         return;
       }
-      if (px >= bx && px <= bx + bw && py >= livesBy && py <= livesBy + bh) {
-        this.handleUpgradeKey("lives");
-        return;
-      }
-      // Otherwise start run
+      // "start" — pointer was not on an upgrade button
       this.resetGame();
       return;
     }
@@ -1224,26 +1207,34 @@ class GameScene extends Phaser.Scene {
 
   private updateHud(): void {
     if (this.mode === "playing") {
-      // Left: Score and Distance stacked
-      this.hudLeftText.setText(formatHudLeft(this.score, this.distanceMeters));
-      // Center: Wave and checkpoints only (short, avoids crowding enemy base visual)
-      this.hudCenterText.setText(formatHudCenter(this.wave, this.checkpointsDestroyed));
-      // Right: Red count and base HP compact
       const baseHp = this.enemyBase ? { hp: this.enemyBase.hp, maxHp: this.enemyBase.maxHp } : null;
-      this.hudRightText.setText(formatHudRight(this.redMobs.length, baseHp));
-      // Lives as labelled hearts — unambiguous count + hearts
-      this.livesText.setText(formatLivesLine(this.cannonLives));
-      // Power-up status line
-      this.powerupStatusText.setText(formatPowerupStatus(this.shieldTimer, this.rapidTimer));
-      this.cannonAngleText.setText("");
+      updatePlayingHud(
+        this.hudLeftText,
+        this.hudCenterText,
+        this.hudRightText,
+        this.livesText,
+        this.powerupStatusText,
+        this.cannonAngleText,
+        this.score,
+        this.distanceMeters,
+        this.wave,
+        this.checkpointsDestroyed,
+        this.redMobs.length,
+        this.cannonLives,
+        this.shieldTimer,
+        this.rapidTimer,
+        baseHp
+      );
       return;
     }
-    this.hudLeftText.setText("");
-    this.hudCenterText.setText("");
-    this.hudRightText.setText("");
-    this.livesText.setText("");
-    this.cannonAngleText.setText("");
-    this.powerupStatusText.setText("");
+    clearPlayingHud(
+      this.hudLeftText,
+      this.hudCenterText,
+      this.hudRightText,
+      this.livesText,
+      this.cannonAngleText,
+      this.powerupStatusText
+    );
   }
 
   private renderMenuState(): void {
@@ -1258,22 +1249,22 @@ class GameScene extends Phaser.Scene {
       this.subtitleText.setText("ENDLESS ARCADE SURVIVAL").setVisible(true);
       this.subtitleText.setPosition(GAME_WIDTH / 2, 126);
       // Show best score on menu
-      const bs = loadBestScore();
-      const bd = loadBestDistance();
-      const bestLine = formatBestLine(bs, bd);
-      if (bestLine !== "") {
-        this.bestScoreText.setText(bestLine).setVisible(true);
-        this.bestScoreText.setPosition(GAME_WIDTH / 2, 152);
-      } else {
-        this.bestScoreText.setText("").setVisible(false);
-      }
-      // Coins
-      const tc = loadTotalCoins();
-      this.coinsText.setText(formatCoinsLine(tc)).setVisible(true);
-      // Upgrades
-      const ups = loadUpgradeState();
-      this.upgradeFireText.setText(formatFireUpgradeLine(ups.fireLevel)).setVisible(true);
-      this.upgradeLivesText.setText(formatLivesUpgradeLine(ups.livesLevel)).setVisible(true);
+      this.bestScoreText.setPosition(GAME_WIDTH / 2, 152);
+      updateMenuHud(
+        {
+          bestScoreText: this.bestScoreText,
+          coinsText: this.coinsText,
+          upgradeFireText: this.upgradeFireText,
+          upgradeLivesText: this.upgradeLivesText,
+          hudLeftText: this.hudLeftText,
+          hudCenterText: this.hudCenterText,
+          hudRightText: this.hudRightText,
+          livesText: this.livesText,
+          cannonAngleText: this.cannonAngleText,
+          powerupStatusText: this.powerupStatusText,
+        },
+        { bestScoreTextX: GAME_WIDTH / 2, bestScoreTextY: 152 }
+      );
       this.promptText.setText("START RUN").setVisible(true);
       this.promptText.y = GameScene.MENU_PROMPT_Y;
       this.promptButton.setVisible(true);
@@ -1281,15 +1272,6 @@ class GameScene extends Phaser.Scene {
       this.endCard.setVisible(false);
       this.endPromptButton.setVisible(false);
       this.touchHintText.setVisible(false);
-
-      // Hide HUD elements during menu
-      this.hudLeftText.setVisible(false);
-      this.hudCenterText.setVisible(false);
-      this.hudRightText.setVisible(false);
-      this.livesText.setVisible(false);
-      this.cannonAngleText.setVisible(false);
-      this.powerupStatusText.setVisible(false);
-
       this.startPromptPulse();
     }
   }

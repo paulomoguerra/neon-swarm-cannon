@@ -161,6 +161,50 @@ async function testShopUpgradeLives(page) {
   console.log("  [PASS] lives upgrade: level=1, coins=100 (140-40)");
 }
 
+async function testShopInsufficientCoins(page) {
+  // After previous tests: coins=100, fireLevel=1, livesLevel=1
+  // Fire upgrade at level 1 costs 140 — can't afford
+  const result1 = await page.evaluate(() => {
+    return window.debug_shop_action("fire");
+  });
+  assert(result1 !== null, "debug_shop_action('fire') returned null");
+  assert(
+    result1.totalCoins === 100,
+    `Coins must stay 100 when can't afford fire upgrade, got ${result1.totalCoins}`
+  );
+  assert(
+    result1.upgrades.fireLevel === 1,
+    `fireLevel must stay 1 when can't afford, got ${result1.upgrades.fireLevel}`
+  );
+  // Lives upgrade at level 1 costs 100 — exactly affordably, should succeed
+  const result2 = await page.evaluate(() => {
+    return window.debug_shop_action("lives");
+  });
+  assert(result2 !== null, "debug_shop_action('lives') returned null");
+  assert(
+    result2.upgrades.livesLevel === 2,
+    `livesLevel must be 2 after buying with exact coins, got ${result2.upgrades.livesLevel}`
+  );
+  assert(
+    result2.totalCoins === 0,
+    `Coins must be 0 after exact purchase, got ${result2.totalCoins}`
+  );
+  // Trying again with 0 coins should be a no-op
+  const result3 = await page.evaluate(() => {
+    return window.debug_shop_action("lives");
+  });
+  assert(result3 !== null, "debug_shop_action('lives') returned null");
+  assert(
+    result3.totalCoins === 0,
+    `Coins must stay 0 after failed purchase attempt, got ${result3.totalCoins}`
+  );
+  assert(
+    result3.upgrades.livesLevel === 2,
+    `livesLevel must stay 2 after failed purchase, got ${result3.upgrades.livesLevel}`
+  );
+  console.log("  [PASS] insufficient-coins purchase is idempotent: coins/lvls unchanged, exact-buy succeeds, zero-coin fails safely");
+}
+
 async function testStartRunAndAdvance(page) {
   // Trigger start (Space key)
   await page.keyboard.press("Space");
@@ -388,6 +432,16 @@ async function main() {
       } catch (e) {
         failed++;
         errors.push({ test: "Shop upgrade — lives", error: e.message });
+        throw e;
+      }
+
+      try {
+        console.log("[TEST] Shop — insufficient coins / idempotency");
+        await testShopInsufficientCoins(page);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "Shop — insufficient coins / idempotency", error: e.message });
         throw e;
       }
 

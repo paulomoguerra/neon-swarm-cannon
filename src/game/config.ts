@@ -129,3 +129,9 @@ export const UPGRADE_LIVES_BONUS = 1;      // extra starting lives per level
 export const UPGRADE_MAX_LEVEL = 3;
 export const BASE_FIRE_INTERVAL = 0.28;
 export const BASE_STARTING_LIVES = 3;
+
+// Menu upgrade button geometry (menu only)
+export const UPGRADE_BW = 300;
+export const UPGRADE_BH = 40;
+export const UPGRADE_FIRE_BY = 170;
+export const UPGRADE_LIVES_BY = 220;

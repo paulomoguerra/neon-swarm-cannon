@@ -19,6 +19,7 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 - Browser title is "Mob Cannon"
 - Debug hooks `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x` are present
 - Shop upgrades correctly deduct coins and increment upgrade levels
+- Shop purchase with insufficient coins is a no-op (coins/levels unchanged); exact-coin purchase succeeds; zero-coin purchase fails safely (idempotent)
 - Starting a run and advancing simulation time produces valid game state
 - Cannon forward-only invariant is maintained (angle = -90 degrees, horizontal movement works)
 - Cannon movement via `debug_move_cannon_to_x` hook works correctly
@@ -52,6 +53,8 @@ These hooks exist to support automated testing. **Do not remove them.** When cha
 | Module | Responsibility |
 |---|---|
 | `main.ts` | Phaser Scene — input, rendering, orchestration, game loop |
+| `game/inputSystem.ts` | Pure input hit-test helpers, cannon X clamp math, keyboard step math |
+| `game/hudSystem.ts` | HUD text update helpers (delegates to uiText.ts) |
 | `game/progression.ts` | localStorage reads/writes, upgrade/economy math |
 | `game/runMath.ts` | Pure endless-run formulas (wave, distance, score, red tuning) |
 | `game/uiText.ts` | Pure UI text formatting helpers (menu lines, HUD lines) |
