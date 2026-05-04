@@ -1215,34 +1215,37 @@ class GameScene extends Phaser.Scene {
 
   private updateHud(): void {
     if (this.mode === "playing") {
-      const baseHp = this.enemyBase ? { hp: this.enemyBase.hp, maxHp: this.enemyBase.maxHp } : null;
       updatePlayingHud(
-        this.hudLeftText,
-        this.hudCenterText,
-        this.hudRightText,
-        this.livesText,
-        this.powerupStatusText,
-        this.cannonAngleText,
-        this.score,
-        this.distanceMeters,
-        this.wave,
-        this.checkpointsDestroyed,
-        this.redMobs.length,
-        this.cannonLives,
-        this.shieldTimer,
-        this.rapidTimer,
-        baseHp
+        {
+          hudLeftText: this.hudLeftText,
+          hudCenterText: this.hudCenterText,
+          hudRightText: this.hudRightText,
+          livesText: this.livesText,
+          powerupStatusText: this.powerupStatusText,
+          cannonAngleText: this.cannonAngleText,
+        },
+        {
+          score: this.score,
+          distanceMeters: this.distanceMeters,
+          wave: this.wave,
+          checkpointsDestroyed: this.checkpointsDestroyed,
+          redMobCount: this.redMobs.length,
+          cannonLives: this.cannonLives,
+          shieldTimer: this.shieldTimer,
+          rapidTimer: this.rapidTimer,
+          baseHp: this.enemyBase ? { hp: this.enemyBase.hp, maxHp: this.enemyBase.maxHp } : null,
+        }
       );
       return;
     }
-    clearPlayingHud(
-      this.hudLeftText,
-      this.hudCenterText,
-      this.hudRightText,
-      this.livesText,
-      this.cannonAngleText,
-      this.powerupStatusText
-    );
+    clearPlayingHud({
+      hudLeftText: this.hudLeftText,
+      hudCenterText: this.hudCenterText,
+      hudRightText: this.hudRightText,
+      livesText: this.livesText,
+      cannonAngleText: this.cannonAngleText,
+      powerupStatusText: this.powerupStatusText,
+    });
   }
 
   private renderMenuState(): void {

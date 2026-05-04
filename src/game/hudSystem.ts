@@ -10,7 +10,6 @@
  */
 
 import type * as PhaserType from "phaser";
-import type { UpgradeState } from "./types";
 import {
   formatHudLeft,
   formatHudCenter,
@@ -25,52 +24,50 @@ import {
 import { loadBestScore, loadBestDistance, loadTotalCoins, loadUpgradeState } from "./progression";
 
 // ---------------------------------------------------------------------------
-// Playing-state HUD
+// Playing-state HUD — refs and state interfaces
 // ---------------------------------------------------------------------------
 
-export function updatePlayingHud(
-  hudLeftText: PhaserType.GameObjects.Text,
-  hudCenterText: PhaserType.GameObjects.Text,
-  hudRightText: PhaserType.GameObjects.Text,
-  livesText: PhaserType.GameObjects.Text,
-  powerupStatusText: PhaserType.GameObjects.Text,
-  cannonAngleText: PhaserType.GameObjects.Text,
-  score: number,
-  distanceMeters: number,
-  wave: number,
-  checkpointsDestroyed: number,
-  redMobCount: number,
-  cannonLives: number,
-  shieldTimer: number,
-  rapidTimer: number,
-  baseHp: { hp: number; maxHp: number } | null
-): void {
-  hudLeftText.setText(formatHudLeft(score, distanceMeters));
-  hudCenterText.setText(formatHudCenter(wave, checkpointsDestroyed));
-  hudRightText.setText(formatHudRight(redMobCount, baseHp));
-  livesText.setText(formatLivesLine(cannonLives));
-  powerupStatusText.setText(formatPowerupStatus(shieldTimer, rapidTimer));
-  cannonAngleText.setText("");
+export interface PlayingHudRefs {
+  hudLeftText: PhaserType.GameObjects.Text;
+  hudCenterText: PhaserType.GameObjects.Text;
+  hudRightText: PhaserType.GameObjects.Text;
+  livesText: PhaserType.GameObjects.Text;
+  powerupStatusText: PhaserType.GameObjects.Text;
+  cannonAngleText: PhaserType.GameObjects.Text;
+}
+
+export interface PlayingHudState {
+  score: number;
+  distanceMeters: number;
+  wave: number;
+  checkpointsDestroyed: number;
+  redMobCount: number;
+  cannonLives: number;
+  shieldTimer: number;
+  rapidTimer: number;
+  baseHp: { hp: number; maxHp: number } | null;
+}
+
+export function updatePlayingHud(refs: PlayingHudRefs, state: PlayingHudState): void {
+  refs.hudLeftText.setText(formatHudLeft(state.score, state.distanceMeters));
+  refs.hudCenterText.setText(formatHudCenter(state.wave, state.checkpointsDestroyed));
+  refs.hudRightText.setText(formatHudRight(state.redMobCount, state.baseHp));
+  refs.livesText.setText(formatLivesLine(state.cannonLives));
+  refs.powerupStatusText.setText(formatPowerupStatus(state.shieldTimer, state.rapidTimer));
+  refs.cannonAngleText.setText("");
 }
 
 // ---------------------------------------------------------------------------
 // Clear playing-state HUD elements
 // ---------------------------------------------------------------------------
 
-export function clearPlayingHud(
-  hudLeftText: PhaserType.GameObjects.Text,
-  hudCenterText: PhaserType.GameObjects.Text,
-  hudRightText: PhaserType.GameObjects.Text,
-  livesText: PhaserType.GameObjects.Text,
-  cannonAngleText: PhaserType.GameObjects.Text,
-  powerupStatusText: PhaserType.GameObjects.Text
-): void {
-  hudLeftText.setText("");
-  hudCenterText.setText("");
-  hudRightText.setText("");
-  livesText.setText("");
-  cannonAngleText.setText("");
-  powerupStatusText.setText("");
+export function clearPlayingHud(refs: PlayingHudRefs): void {
+  refs.hudLeftText.setText("");
+  refs.hudCenterText.setText("");
+  refs.hudRightText.setText("");
+  refs.livesText.setText("");
+  refs.cannonAngleText.setText("");
+  refs.powerupStatusText.setText("");
 }
 
 // ---------------------------------------------------------------------------
