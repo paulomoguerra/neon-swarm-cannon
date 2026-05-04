@@ -476,6 +476,38 @@ class GameScene extends Phaser.Scene {
     this.promptText.setAlpha(1);
   }
 
+  // Hide all menu-only UI elements (title, upgrade shop, coins, prompt)
+  private hideMenuUi(): void {
+    this.titleText.setVisible(false);
+    this.subtitleText.setVisible(false);
+    this.bestScoreText.setVisible(false);
+    this.promptText.setVisible(false);
+    this.stopPromptPulse();
+    this.promptButton.setVisible(false);
+    this.upgradeFireBg.setVisible(false);
+    this.upgradeLivesBg.setVisible(false);
+    this.upgradeFireText.setVisible(false);
+    this.upgradeLivesText.setVisible(false);
+    this.coinsText.setVisible(false);
+  }
+
+  // Hide the end-state overlay (dim + card + restart button)
+  private hideEndOverlay(): void {
+    this.overlayDim.setVisible(false);
+    this.endCard.setVisible(false);
+    this.endPromptButton.setVisible(false);
+  }
+
+  // Show gameplay HUD elements when entering play mode
+  private showGameplayHud(): void {
+    this.hudLeftText.setVisible(true);
+    this.hudCenterText.setVisible(true);
+    this.hudRightText.setVisible(true);
+    this.livesText.setVisible(true);
+    this.cannonAngleText.setVisible(true);
+    this.touchHintText.setVisible(true);
+  }
+
   update(_time: number, deltaMs: number): void {
     this.stepGame(deltaMs / 1000);
   }
@@ -798,29 +830,10 @@ class GameScene extends Phaser.Scene {
     // Start with cannon angle pointing straight up
     this.cannonAngle = -Math.PI / 2;
 
-    // Hide menu UI
-    this.titleText.setVisible(false);
-    this.subtitleText.setVisible(false);
-    this.bestScoreText.setVisible(false);
-    this.promptText.setVisible(false);
-    this.stopPromptPulse();
-    this.promptButton.setVisible(false);
-    this.upgradeFireBg.setVisible(false);
-    this.upgradeLivesBg.setVisible(false);
-    this.upgradeFireText.setVisible(false);
-    this.upgradeLivesText.setVisible(false);
-    this.coinsText.setVisible(false);
-    this.overlayDim.setVisible(false);
-    this.endCard.setVisible(false);
-    this.endPromptButton.setVisible(false);
-
-    // Show HUD elements
-    this.hudLeftText.setVisible(true);
-    this.hudCenterText.setVisible(true);
-    this.hudRightText.setVisible(true);
-    this.livesText.setVisible(true);
-    this.cannonAngleText.setVisible(true);
-    this.touchHintText.setVisible(true);
+    // Hide menu UI and end overlay; show gameplay HUD
+    this.hideMenuUi();
+    this.hideEndOverlay();
+    this.showGameplayHud();
 
     // Create level gates
     this.createLevelGates();
@@ -872,7 +885,7 @@ class GameScene extends Phaser.Scene {
     this.titleText.setText("GAME OVER").setVisible(true);
     this.titleText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 115);
 
-    // Hide upgrade shop elements — not shown during gameover
+    // Hide upgrade shop and touch hint — not shown during gameover
     this.upgradeFireText.setVisible(false);
     this.upgradeLivesText.setVisible(false);
     this.upgradeFireBg.setVisible(false);
@@ -1263,9 +1276,7 @@ class GameScene extends Phaser.Scene {
       this.promptText.setText("START RUN").setVisible(true);
       this.promptText.y = GameScene.MENU_PROMPT_Y;
       this.promptButton.setVisible(true);
-      this.overlayDim.setVisible(false);
-      this.endCard.setVisible(false);
-      this.endPromptButton.setVisible(false);
+      this.hideEndOverlay();
       this.touchHintText.setVisible(false);
       this.startPromptPulse();
     }
