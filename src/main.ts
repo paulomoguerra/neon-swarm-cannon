@@ -1383,6 +1383,7 @@ class GameScene extends Phaser.Scene {
       advanceTime: (ms: number) => void;
       debug_shop_action: (type: "fire" | "lives") => import("./game/debugHooks").ShopResult | null;
       debug_move_cannon_to_x: (x: number, ms: number) => void;
+      debug_force_gameover: () => string;
     };
     win.render_game_to_text = () => {
       const snapshot: GameDebugSnapshot = {
@@ -1440,6 +1441,13 @@ class GameScene extends Phaser.Scene {
       for (let i = 0; i < steps; i += 1) {
         this.stepGame(1 / 60);
       }
+    };
+    win.debug_force_gameover = () => {
+      if (this.mode !== "playing") {
+        this.resetGame();
+      }
+      this.endGame();
+      return win.render_game_to_text();
     };
   }
 }

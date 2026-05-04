@@ -374,6 +374,34 @@ async function testForwardOnlyInvariant(page) {
   console.log(`  [PASS] ArrowLeft moves cannon left (${xBeforeLeft} -> ${stateAfterLeft.cannon.x}), angle stays ${stateAfterLeft.cannon.angleDegrees}`);
 }
 
+async function testGameoverRestartHook(page) {
+  // Start a run via Space
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(500);
+
+  const stateBefore = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(stateBefore.mode === "playing", `Expected mode 'playing' after Space, got '${stateBefore.mode}'`);
+
+  // Force gameover deterministically
+  const stateAfterGO = JSON.parse(await page.evaluate(() => window.debug_force_gameover()));
+  assert(stateAfterGO.mode === "gameover", `Expected mode 'gameover' after debug_force_gameover, got '${stateAfterGO.mode}'`);
+
+  // Snapshot must still be valid JSON after gameover
+  const snapshot = await page.evaluate(() => window.render_game_to_text());
+  const parsed = JSON.parse(snapshot);
+  assert(parsed !== null, "render_game_to_text must return valid JSON after gameover");
+  assert(parsed.mode === "gameover", `Snapshot mode must be 'gameover', got '${parsed.mode}'`);
+
+  // Press Space to restart — should return to playing
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(300);
+
+  const stateAfterRestart = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(stateAfterRestart.mode === "playing", `Expected mode 'playing' after Space restart, got '${stateAfterRestart.mode}'`);
+
+  console.log("  [PASS] debug_force_gameover: gameover -> restart -> playing");
+}
+
 async function testDebugMoveCannonToX(page) {
   // Start a run
   await page.keyboard.press("Space");
@@ -534,6 +562,16 @@ async function main() {
       } catch (e) {
         failed++;
         errors.push({ test: "debug_move_cannon_to_x hook", error: e.message });
+        throw e;
+      }
+
+      try {
+        console.log("[TEST] debug_force_gameover hook");
+        await testGameoverRestartHook(page);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "debug_force_gameover hook", error: e.message });
         throw e;
       }
     });

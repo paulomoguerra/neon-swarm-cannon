@@ -39,6 +39,14 @@ export interface GameDebugHooks {
    * Used by smoke tests to verify touch/drag movement invariant.
    */
   debug_move_cannon_to_x: (x: number, ms: number) => void;
+
+  /**
+   * Forces the game into gameover state deterministically.
+   * - If mode === "playing": calls endGame() directly (same path as natural gameover).
+   * - If mode !== "playing" (menu/victory): starts a run first, waits, then forces gameover.
+   * Returns a render_game_to_text()-style snapshot after the transition.
+   */
+  debug_force_gameover: () => string;
 }
 
 declare global {
@@ -47,5 +55,6 @@ declare global {
     advanceTime: GameDebugHooks["advanceTime"];
     debug_shop_action: GameDebugHooks["debug_shop_action"];
     debug_move_cannon_to_x: GameDebugHooks["debug_move_cannon_to_x"];
+    debug_force_gameover: GameDebugHooks["debug_force_gameover"];
   }
 }

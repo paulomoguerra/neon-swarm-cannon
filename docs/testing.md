@@ -17,7 +17,7 @@ npm run smoke
 Runs automated Playwright smoke tests against a local Vite dev server (port 5173). Verifies:
 
 - Browser title is "Mob Cannon"
-- Debug hooks `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x` are present
+- Debug hooks `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x`, `debug_force_gameover` are present
 - Shop upgrades correctly deduct coins and increment upgrade levels
 - Shop purchase with insufficient coins is a no-op (coins/levels unchanged); exact-coin purchase succeeds; zero-coin purchase fails safely (idempotent)
 - Shop purchase at max upgrade level is a no-op (coins and levels unchanged)
@@ -25,10 +25,11 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 - Cannon forward-only invariant is maintained (angle = -90 degrees, horizontal movement works)
 - Cannon movement via `debug_move_cannon_to_x` hook works correctly
 - Game over state is stable (no crash, canvas present, hooks respond)
+- Deterministic gameover/restart via `debug_force_gameover` hook
 
 ## Debug Hooks
 
-The game exposes four test hooks on `window`:
+The game exposes five test hooks on `window`:
 
 | Hook | Signature | Purpose |
 |---|---|---|
@@ -36,6 +37,7 @@ The game exposes four test hooks on `window`:
 | `advanceTime` | `(ms: number) => void` | Advances simulation deterministically by `ms` milliseconds |
 | `debug_shop_action` | `(type: "fire" \| "lives") => ShopResult \| null` | Buys an upgrade from the menu and returns the result |
 | `debug_move_cannon_to_x` | `(x: number, ms: number) => void` | Sets cannon target X and advances simulation by `ms` ms; verifies smooth touch/drag movement invariant |
+| `debug_force_gameover` | `() => string` | Forces gameover state deterministically (starts a run if in menu); returns snapshot after transition |
 
 These hooks exist to support automated testing. **Do not remove them.** When changing gameplay code, ensure hooks continue to work correctly.
 
@@ -63,7 +65,7 @@ These hooks exist to support automated testing. **Do not remove them.** When cha
 | `game/art.ts` | Phaser object factory functions |
 | `game/world.ts` | Background rendering |
 | `game/effects.ts` | Floating text, ring pulse effects |
-| `game/debugHooks.ts` | Debug hook type declarations (`render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x`) |
+| `game/debugHooks.ts` | Debug hook type declarations (`render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x`, `debug_force_gameover`) |
 | `game/config.ts` | All tuning constants |
 | `game/types.ts` | Shared TypeScript types |
 
