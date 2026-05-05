@@ -10,14 +10,14 @@ export function drawWorld(
   showHud: boolean = true,
 ): void {
   background.clear();
-  // Sky
+  const skyH = GAME_HEIGHT;
   background.fillStyle(0x5ba8d4, 1);
-  background.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  background.fillRect(0, 0, GAME_WIDTH, skyH);
 
   // Side water zones — adjusted for portrait 540-wide canvas
   background.fillStyle(0x1e5f8a, 1);
-  background.fillRect(0, 0, 50, GAME_HEIGHT);
-  background.fillRect(490, 0, 50, GAME_HEIGHT);
+  background.fillRect(0, 0, 50, skyH);
+  background.fillRect(490, 0, 50, skyH);
 
   // Soft sun-glow orbs — positioned for portrait (upper area)
   background.fillStyle(0xd0eaff, 0.55);
@@ -27,7 +27,7 @@ export function drawWorld(
 
   // Arena floor — green with subtle gradient bands — portrait narrow width
   background.fillStyle(0x3ea34e, 1);
-  background.fillRoundedRect(48, 0, 444, GAME_HEIGHT, 18);
+  background.fillRoundedRect(48, 0, 444, skyH, 18);
 
   drawBoardSlab(background);
 

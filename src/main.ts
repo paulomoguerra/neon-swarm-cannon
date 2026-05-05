@@ -373,6 +373,11 @@ class GameScene extends Phaser.Scene {
     this.updateHud();
     this.publishTestHooks();
     this.renderMenuState();
+
+    // Re-draw scene on resize events so the game world is always freshly rendered.
+    this.scale.on("resize", () => {
+      this.drawScene();
+    });
   }
 
   // Draw the menu CTA button (rounded rect behind promptText) — thumb-zone sized
@@ -1482,10 +1487,10 @@ new Phaser.Game({
   parent: "game",
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
-  backgroundColor: "#5dbb63",
+  backgroundColor: "#5ba8d4",
   scene: [GameScene],
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.ENVELOP,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
 });

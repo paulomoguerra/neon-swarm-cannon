@@ -486,11 +486,20 @@ async function testMobileCanvasVisible(page) {
   const box = await canvas.boundingBox();
   assert(box !== null && box.width > 0 && box.height > 0,
     `Canvas must have nonzero dimensions under mobile viewport, got ${JSON.stringify(box)}`);
-  console.log(`  [PASS] canvas visible at mobile viewport: ${Math.round(box.width)}x${Math.round(box.height)}`);
   // Assert portrait aspect — mobile viewports should show the game taller than wide
   assert(box.height > box.width,
     `Canvas should be portrait (height ${Math.round(box.height)} > width ${Math.round(box.width)})`);
-  console.log(`  [PASS] canvas is portrait-first: ${Math.round(box.height)}x${Math.round(box.width)} (height > width)`);
+  console.log(`  [PASS] canvas is portrait: ${Math.round(box.width)}x${Math.round(box.height)} (width < height)`);
+  // Assert canvas fills the full viewport — not letterboxed.
+  // On a 393x852 viewport the game should consume nearly all of it.
+  // ENVELOP scales the 540-wide portrait canvas to fill the viewport, cropping
+  // horizontally if needed. Canvas bounding box may be wider than viewport (negative x).
+  // Width should be >= 390 and height >= 845 to confirm no letterboxing.
+  assert(box.width >= 390,
+    `Canvas width should be >= 390 on a 393-wide viewport, got ${Math.round(box.width)} (may indicate letterboxing)`);
+  assert(box.height >= 845,
+    `Canvas height should be >= 845 on a 852-tall viewport, got ${Math.round(box.height)} (may indicate letterboxing)`);
+  console.log(`  [PASS] canvas fills viewport: ${Math.round(box.width)}x${Math.round(box.height)} (>= 390x845)`);
 }
 
 async function testMobileTapStartsRun(page) {
@@ -533,13 +542,12 @@ async function testMobileDragMovesCannon(page) {
   // Perform a touch drag from center toward the right side of the canvas
   const canvas = await page.$("canvas");
   const box = await canvas.boundingBox();
-  const cx = box.x + box.width / 2;
-  const cy = box.y + box.height / 2;
-  const dragLen = 60;
-  // drag right
-  await page.touchscreen.tap(cx, cy);
-  await page.waitForTimeout(100);
-  // Use mouse in touch emulation mode to simulate drag since touchscreen.tap doesn't support move
+  const toClientX = (logicalX) => box.x + (logicalX / 540) * box.width;
+  const cx = toClientX(stateBefore.cannon.x);
+  const cy = box.y + (stateBefore.cannon.y / 960) * box.height;
+  const dragLen = 90;
+  // Drag right from the cannon's current visual position. ENVELOP may crop
+  // horizontally on wide viewports, so we compute client coords from cannon.x.
   await page.mouse.move(cx, cy);
   await page.mouse.down();
   await page.mouse.move(cx + dragLen, cy, { steps: 5 });
