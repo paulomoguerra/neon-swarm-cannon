@@ -149,13 +149,17 @@ class GameScene extends Phaser.Scene {
   private cannonAngleText!: Phaser.GameObjects.Text;
   private touchHintText!: Phaser.GameObjects.Text;
   private scrollOffset = 0;
-  // Position constants for prompt text centering — portrait thumb-zone optimized
+  // Position constants for prompt text centering - portrait thumb-zone optimized.
   private static readonly MENU_PROMPT_Y = 468;
-  private static readonly END_RESTART_PROMPT_Y = 370;
+  private static readonly END_RESTART_PROMPT_Y = 562;
   private promptTween?: Phaser.Tweens.Tween;
 
   constructor() {
     super("game");
+  }
+
+  preload(): void {
+    this.load.image("cannon-hover-option-b", "/assets/cannon-hover-option-b.png");
   }
 
   create(): void {
@@ -200,9 +204,9 @@ class GameScene extends Phaser.Scene {
     this.upgradeLivesBg.setVisible(false);
 
     // Title — styled with stroke and shadow for arcade feel — portrait upper area
-    this.titleText = this.add.text(GAME_WIDTH / 2, 52, "MOB CANNON", {
+    this.titleText = this.add.text(GAME_WIDTH / 2, 52, "NEON SWARM", {
       fontFamily: "Arial",
-      fontSize: "48px",
+      fontSize: "44px",
       color: "#ffffff",
       fontStyle: "bold",
       stroke: "#004488",
@@ -233,36 +237,37 @@ class GameScene extends Phaser.Scene {
     this.bestScoreText.setDepth(110);
 
     // HUD — left block (Score + Distance)
-    this.hudLeftText = this.add.text(20, 15, "", {
+    this.hudLeftText = this.add.text(68, 18, "", {
       fontFamily: "Arial",
-      fontSize: "15px",
+      fontSize: "13px",
       color: "#ffffff",
       fontStyle: "bold",
     });
     this.hudLeftText.setDepth(110);
 
     // HUD — center block (Wave + Base HP — moved up + smaller to reduce top crowding)
-    this.hudCenterText = this.add.text(GAME_WIDTH / 2, 9, "", {
+    this.hudCenterText = this.add.text(GAME_WIDTH / 2, 17, "", {
       fontFamily: "Arial",
-      fontSize: "14px",
+      fontSize: "13px",
       color: "#ffffff",
       fontStyle: "bold",
+      align: "center",
     }).setOrigin(0.5, 0);
     this.hudCenterText.setDepth(110);
 
     // HUD — right block (Red mob count + kills compact)
-    this.hudRightText = this.add.text(GAME_WIDTH - 20, 15, "", {
+    this.hudRightText = this.add.text(GAME_WIDTH - 68, 18, "", {
       fontFamily: "Arial",
-      fontSize: "15px",
+      fontSize: "13px",
       color: "#ffffff",
       fontStyle: "bold",
     }).setOrigin(1, 0);
     this.hudRightText.setDepth(110);
 
     // Lives — below right HUD (y pushed down to 46 for more breathing room)
-    this.livesText = this.add.text(GAME_WIDTH - 20, 46, "", {
+    this.livesText = this.add.text(GAME_WIDTH - 68, 49, "", {
       fontFamily: "Arial",
-      fontSize: "16px",
+      fontSize: "13px",
       color: "#ff5555",
       fontStyle: "bold",
     }).setOrigin(1, 0);
@@ -303,31 +308,35 @@ class GameScene extends Phaser.Scene {
     // Upgrade buttons (shown on menu below coins) — larger font for mobile touch
     this.upgradeFireText = this.add.text(GAME_WIDTH / 2, UPGRADE_FIRE_BY + UPGRADE_BH / 2, "", {
       fontFamily: "Arial",
-      fontSize: "14px",
+      fontSize: "13px",
       color: "#aaddff",
       fontStyle: "bold",
       stroke: "#000000",
       strokeThickness: 2,
+      align: "center",
     }).setOrigin(0.5);
     this.upgradeFireText.setDepth(110);
 
     this.upgradeLivesText = this.add.text(GAME_WIDTH / 2, UPGRADE_LIVES_BY + UPGRADE_BH / 2, "", {
       fontFamily: "Arial",
-      fontSize: "14px",
+      fontSize: "13px",
       color: "#ffaaaa",
       fontStyle: "bold",
       stroke: "#000000",
       strokeThickness: 2,
+      align: "center",
     }).setOrigin(0.5);
     this.upgradeLivesText.setDepth(110);
 
     // Power-up status indicator (small HUD element)
-    this.powerupStatusText = this.add.text(20, 60, "", {
+    this.powerupStatusText = this.add.text(GAME_WIDTH / 2, 78, "", {
       fontFamily: "Arial",
-      fontSize: "11px",
+      fontSize: "12px",
       color: "#ffffff",
       fontStyle: "bold",
-    });
+      stroke: "#000000",
+      strokeThickness: 2,
+    }).setOrigin(0.5, 0);
     this.powerupStatusText.setDepth(110);
 
     // Prompt text — used for both menu CTA and end-state restart — larger for mobile
@@ -443,15 +452,15 @@ class GameScene extends Phaser.Scene {
   }
 
   // Draw the end-state overlay: full dim + centered card + restart button + summary
-  private drawEndOverlay(title: string, subtitle: string): void {
+  private drawEndOverlay(): void {
     // Full-screen dim
     this.overlayDim.clear();
     this.overlayDim.fillStyle(0x000000, 0.60);
     this.overlayDim.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Centered card
-    const cw = 480;
-    const ch = 270;
+    // Centered card inside the mobile/desktop safe column.
+    const cw = 420;
+    const ch = 300;
     const cx = GAME_WIDTH / 2 - cw / 2;
     const cy = GAME_HEIGHT / 2 - ch / 2;
 
@@ -470,10 +479,10 @@ class GameScene extends Phaser.Scene {
     this.endCard.strokeRoundedRect(cx + 8, cy + 8, cw - 16, ch - 16, 16);
 
     // End-state restart button inside card
-    const bw = 280;
-    const bh = 52;
+    const bw = 260;
+    const bh = 56;
     const bx = GAME_WIDTH / 2 - bw / 2;
-    const by = cy + ch - 80;
+    const by = GameScene.END_RESTART_PROMPT_Y - bh / 2;
     this.endPromptButton.clear();
     this.endPromptButton.fillStyle(0x000000, 0.3);
     this.endPromptButton.fillRoundedRect(bx + 2, by + 3, bw, bh, 13);
@@ -533,6 +542,7 @@ class GameScene extends Phaser.Scene {
     this.hudRightText.setVisible(true);
     this.livesText.setVisible(true);
     this.cannonAngleText.setVisible(true);
+    this.powerupStatusText.setVisible(true);
     this.touchHintText.setVisible(true);
   }
 
@@ -754,7 +764,7 @@ class GameScene extends Phaser.Scene {
           // Throttled feedback
           if (this.gateFeedbackCooldown <= 0) {
             const feedbackLabel = gate.kind === "multiply" ? `x${gate.value}!` : `+${gate.value}!`;
-            showFloatingText(this, gate.x, gate.y - gate.height / 2 - 10, feedbackLabel, "#00ffcc");
+            showFloatingText(this, gate.x, gate.y - gate.height / 2 - 6, feedbackLabel, "#00ffcc", 16);
             this.gateFeedbackCooldown = 0.15;
           }
         }
@@ -841,12 +851,6 @@ class GameScene extends Phaser.Scene {
     }
     const body = createCannon(this);
     body.setPosition(CANNON_X, CANNON_Y);
-    // Barrel child is at index 3 (the rect at -42)
-    // Rotate barrel so it points upward by default (will be overridden by aim)
-    const barrel = body.list[3] as Phaser.GameObjects.Rectangle;
-    if (barrel) {
-      barrel.rotation = -Math.PI / 2; // point up
-    }
     this.cannon = {
       body,
       x: CANNON_X,
@@ -899,19 +903,17 @@ class GameScene extends Phaser.Scene {
 
     // Build summary text for card
     const summaryLines = [
-      `Score: ${this.score}`,
-      `Distance: ${Math.floor(this.distanceMeters)}m`,
-      `Wave: ${this.wave}`,
-      `Checkpoints: ${this.checkpointsDestroyed}`,
-      `Coins: ${this.coins}`,
+      `Score ${this.score}   Distance ${Math.floor(this.distanceMeters)}m`,
+      `Wave ${this.wave}   Checkpoints ${this.checkpointsDestroyed}   Coins ${this.coins}`,
     ];
     const bestLine = this.score >= this.bestScore
       ? `NEW BEST SCORE: ${this.bestScore}!`
       : `Best: ${this.bestScore}  Best Dist: ${this.bestDistance}m`;
 
-    this.drawEndOverlay("GAME OVER", "The horde reached your cannon!");
+    this.drawEndOverlay();
     this.titleText.setText("GAME OVER").setVisible(true);
-    this.titleText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 115);
+    this.titleText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 98);
+    this.titleText.setFontSize("44px");
 
     // Hide upgrade shop and touch hint — not shown during gameover
     this.upgradeFireText.setVisible(false);
@@ -921,17 +923,19 @@ class GameScene extends Phaser.Scene {
     this.touchHintText.setVisible(false);
 
     // Subtitle becomes summary lines
-    this.subtitleText.setText(summaryLines.join("   |   ")).setVisible(true);
+    this.subtitleText.setText(summaryLines.join("\n")).setVisible(true);
     this.subtitleText.setFontSize("14px");
-    this.subtitleText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 74);
+    this.subtitleText.setAlign("center");
+    this.subtitleText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 42);
 
     // Best score line below
     this.bestScoreText.setText(bestLine).setVisible(true);
-    this.bestScoreText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 48);
+    this.bestScoreText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 18);
     this.bestScoreText.setFontSize("13px");
     this.bestScoreText.setColor("#f0c840");
 
     this.promptText.setText("PLAY AGAIN").setVisible(true);
+    this.promptText.setFontSize("24px");
     this.promptText.y = GameScene.END_RESTART_PROMPT_Y;
     this.overlayDim.setVisible(true);
     this.endCard.setVisible(true);
@@ -942,9 +946,10 @@ class GameScene extends Phaser.Scene {
 
   private winGame(): void {
     this.mode = "victory";
-    this.drawEndOverlay("VICTORY!", "Base destroyed!");
+    this.drawEndOverlay();
     this.titleText.setText("VICTORY!").setVisible(true);
-    this.titleText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 115);
+    this.titleText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 98);
+    this.titleText.setFontSize("44px");
     this.subtitleText.setText("").setVisible(false);
     this.bestScoreText.setText("").setVisible(false);
     this.upgradeFireText.setVisible(false);
@@ -952,6 +957,7 @@ class GameScene extends Phaser.Scene {
     this.upgradeFireBg.setVisible(false);
     this.upgradeLivesBg.setVisible(false);
     this.promptText.setText("PLAY AGAIN").setVisible(true);
+    this.promptText.setFontSize("24px");
     this.promptText.y = GameScene.END_RESTART_PROMPT_Y;
     this.overlayDim.setVisible(true);
     this.endCard.setVisible(true);
@@ -1060,7 +1066,7 @@ class GameScene extends Phaser.Scene {
           red.body.setActive(false).setVisible(false);
           this.kills += 1;
           this.coins += COIN_PER_KILL;
-          showFloatingText(this, red.body.x, red.body.y, `+${COIN_PER_KILL}`, "#ffd700");
+          showFloatingText(this, red.body.x, red.body.y, `+${COIN_PER_KILL}`, "#ffd700", 15);
         }
       }
     }
@@ -1081,14 +1087,14 @@ class GameScene extends Phaser.Scene {
           // Shield absorbs the hit
           this.shieldTimer = 0;
           red.body.setActive(false).setVisible(false);
-          showFloatingText(this, cannonX, CANNON_Y - 60, "SHIELD!", "#00eeff");
+          showFloatingText(this, cannonX, CANNON_Y - 60, "SHIELD!", "#00eeff", 17);
           showRingPulse(this, cannonX, CANNON_Y, 0x00eeff);
         } else {
           // Consume one life, remove the red, show feedback
           this.cannonLives -= 1;
           red.body.setActive(false).setVisible(false);
           // Show life loss near cannon (center-right area, not under HUD)
-          showFloatingText(this, cannonX + 60, CANNON_Y - 60, "-1 \u2665", "#ffaaaa");
+          showFloatingText(this, cannonX + 60, CANNON_Y - 60, "-1 \u2665", "#ffaaaa", 17);
           this.cameras.main.shake(120, 0.006);
           if (this.cannonLives <= 0) {
             this.endGame();
@@ -1141,13 +1147,13 @@ class GameScene extends Phaser.Scene {
           this.checkpointsDestroyed += 1;
           this.coins += COIN_PER_CHECKPOINT;
           // Show checkpoint reward below HUD/base area (y=185, depth 200) to avoid obscuring top HUD
-          const rewardText = this.add.text(GAME_WIDTH / 2, 185, `CHECKPOINT!  +${COIN_PER_CHECKPOINT}`, {
+          const rewardText = this.add.text(GAME_WIDTH / 2, 188, `CHECKPOINT +${COIN_PER_CHECKPOINT}`, {
             fontFamily: "Arial",
-            fontSize: "28px",
+            fontSize: "22px",
             color: "#ffcc00",
             fontStyle: "bold",
             stroke: "#7a3800",
-            strokeThickness: 5,
+            strokeThickness: 4,
           }).setOrigin(0.5).setDepth(200);
           this.tweens.add({
             targets: rewardText,
@@ -1288,10 +1294,13 @@ class GameScene extends Phaser.Scene {
       this.menuPanel.setVisible(true);
       this.upgradeFireBg.setVisible(true);
       this.upgradeLivesBg.setVisible(true);
-      this.titleText.setText("MOB CANNON").setVisible(true);
+      this.titleText.setText("NEON SWARM").setVisible(true);
       this.titleText.setPosition(GAME_WIDTH / 2, 52);
+      this.titleText.setFontSize("44px");
       this.subtitleText.setText("ENDLESS ARCADE SURVIVAL").setVisible(true);
       this.subtitleText.setPosition(GAME_WIDTH / 2, 96);
+      this.subtitleText.setFontSize("13px");
+      this.subtitleText.setAlign("center");
       // Show best score on menu
       this.bestScoreText.setPosition(GAME_WIDTH / 2, 116);
       updateMenuHud(
@@ -1310,6 +1319,7 @@ class GameScene extends Phaser.Scene {
         { bestScoreTextX: GAME_WIDTH / 2, bestScoreTextY: 116 }
       );
       this.promptText.setText("START RUN").setVisible(true);
+      this.promptText.setFontSize("26px");
       this.promptText.y = GameScene.MENU_PROMPT_Y;
       this.promptButton.setVisible(true);
       this.hideEndOverlay();
@@ -1366,11 +1376,11 @@ class GameScene extends Phaser.Scene {
   private collectPowerup(pu: Powerup): void {
     if (pu.kind === "shield") {
       this.shieldTimer = SHIELD_DURATION;
-      showFloatingText(this, pu.x, pu.y, "SHIELD!", "#00eeff");
+      showFloatingText(this, pu.x, pu.y, "SHIELD!", "#00eeff", 17);
       showRingPulse(this, pu.x, pu.y, 0x00eeff);
     } else {
       this.rapidTimer = RAPID_DURATION;
-      showFloatingText(this, pu.x, pu.y, "RAPID!", "#ff8800");
+      showFloatingText(this, pu.x, pu.y, "RAPID!", "#ff8800", 17);
       showRingPulse(this, pu.x, pu.y, 0xff8800);
     }
     pu.body.destroy();
@@ -1490,7 +1500,7 @@ new Phaser.Game({
   backgroundColor: "#5ba8d4",
   scene: [GameScene],
   scale: {
-    mode: Phaser.Scale.ENVELOP,
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
 });

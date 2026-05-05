@@ -1,12 +1,12 @@
-# PRD: Mob Cannon — Controle de Hordas e Upgrades
+# PRD: Neon Swarm Cannon — Controle de Hordas e Upgrades
 
 ## 1. Visao e Objetivos do Produto
 
-Mob Cannon e um jogo arcade 2.5D de sobrevivencia endless inspirado no core loop de Mob Control: canhao fixo na base inferior, hordas de mobs azuis que disparam para cima por gates multiplicadores, mobs vermelhos que descem e atacam, barreiras e base inimiga com HP, loop de checkpoint ao destruir a base, e meta-progresão persistente via loja de upgrades.
+Neon Swarm Cannon e um jogo arcade 2.5D de sobrevivencia endless inspirado no core loop de Mob Control: canhao fixo na base inferior, hordas de projeteis/energia cyan que disparam para cima por gates multiplicadores, mobs vermelhos que descem e atacam, barreiras e base inimiga com HP, loop de checkpoint ao destruir a base, e meta-progresão persistente via loja de upgrades.
 
 O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de nenhum titulo existente. O objetivo e recriar a mecanica e a sensacao geral com arte original em Phaser 3 + TypeScript + Vite.
 
-**Estado atual (f30c9d4 - "Phase 5 mobile controls and smoke hardening"):** o MVP tecnico esta implementado, funcional e verificado por smoke tests automaticos. O produto e jogavel, mas a arquitetura de `main.ts` precisa de refatoracao incremental em fases futuras.
+**Estado atual (UX + visual pass - Option B cannon/projectiles):** o MVP tecnico esta implementado, funcional e verificado por smoke tests automaticos. O produto e jogavel, com foco atual em proporcao correta no browser, legibilidade mobile/desktop, hierarquia de HUD, clareza da loja, overlays de fim de partida, canhao sprite Option B e projeteis de energia cyan. A arquitetura de `main.ts` ainda precisa de refatoracao incremental em fases futuras.
 
 ---
 
@@ -51,6 +51,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 
 ### 4.1 Canon e Disparo
 - Canhao fixo na parte inferior-central (`CANNON_X = 480`, `CANNON_Y = 470`).
+- Direcao visual escolhida: "Option B", implementada como sprite raster em `public/assets/cannon-hover-option-b.png`: torre hover futurista compacta, com armadura graphite/cobalt, nucleo cyan brilhante, fins laterais e canhao curto apontando para cima.
 - Disparo automatico com intervalo base de 0.28s, redutivel por upgrades de Fire Rate.
 - Angulo fixo em -90 graus — sem mira livre.
 - Movimento horizontal via teclado (ArrowLeft/Right, A/D) ou drag de pointer.
@@ -58,6 +59,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 
 ### 4.2 Mobs Azuis
 - Spawnados pelo canhao em intervalos regulares.
+- Renderizados como projeteis de energia cyan com nucleo brilhante e trail curto, para combinar com a torre hover Option B.
 - Subem verticalmente a velocidade `blueSpeed = 280 px/s`.
 - Ao colidir com mob vermelho ou barreira, ambos morrem.
 - Ao colidir com base inimiga, base perde HP e o mob morre.
@@ -105,15 +107,24 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 - Ambos aparecen como icons flutuantes com feedback visual (ring pulse, texto).
 
 ### 4.10 Loja e Meta-Progresao
-- Persistente via localStorage (`mobCannon_totalCoins`, `mobCannon_upgrades`).
+- Persistente via localStorage (`mobCannon_totalCoins`, `mobCannon_upgrades`). As chaves mantem o prefixo historico `mobCannon` para preservar progresso local existente.
 - Upgrades: Fire Rate (3 niveis, custos [60, 140, 280], reduz intervalo de disparo) e Lives (3 niveis, custos [40, 100, 200], +1 vida inicial por nivel).
 - Melhores score e distancia tambem persistidos.
 
 ### 4.11 UI / HUD
-- Menu principal: linhas de best score, best distance, coins e upgrades com custos/atalhos (1/2).
-- Durante gameplay (top-center): wave, base HP, checkpoint count.
-- Lives e status de powerups.
-- Game over: score final, best distance, opcao de restart.
+- Menu principal: best score, best distance, coins, upgrades com estado de compra claro (`Buy for`, `Need`, `MAX`) e CTA de start em zona confortavel para toque.
+- Durante gameplay: HUD compacto dentro de uma safe area central e canvas escalado com `FIT` para evitar corte/distorcao em mobile e desktop.
+- Informacao critica persistente: score/distancia, wave/checkpoints, red/base HP e vidas.
+- Status de powerups aparece como linha compacta contextual, sem disputar o centro do campo.
+- Feedback de checkpoint e recompensas deve ser legivel, mas nao bloquear a leitura da base, gates e hordas.
+- Game over: card central dentro da safe area, resumo em multiplas linhas, best score separado e CTA alinhado com o botao.
+
+### 4.12 Direcao de UX e Design
+- Prioridade 1: preservar o campo de jogo. HUD e overlays nao devem cobrir o centro util durante gameplay normal.
+- Prioridade 2: proteger proporcao e visibilidade. O canvas deve usar `Phaser.Scale.FIT`, mantendo o jogo inteiro visivel em mobile e desktop sem crop.
+- Prioridade 3: reduzir ambiguidade. Upgrades precisam comunicar se podem ser comprados, quanto custam e o que o jogador ganha.
+- Prioridade 4: melhorar feedback sem poluir. Textos grandes de recompensa devem ser temporarios, menores e posicionados fora dos pontos de decisao quando possivel.
+- Prioridade 5: reforcar linguagem visual original: silhuetas melhores para gates, powerups, barreiras, inimigos e canhao; menos dependencia de texto puro.
 
 ---
 
@@ -127,28 +138,34 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 | `advanceTime` | `(ms: number) => void` | Avanca a simulacao em `ms` milissegundos |
 | `debug_shop_action` | `(type: "fire" \| "lives") => ShopResult \| null` | Compra upgrade a partir do menu |
 | `debug_move_cannon_to_x` | `(x: number, ms: number) => void` | Move o canhao para X e avanca tempo — para verificar invariante de angulo |
+| `debug_force_gameover` | `() => string` | Forca estado de game over de forma deterministica e retorna snapshot |
 
 ### Smoke Tests (`npm run smoke`)
 
-Executa 7 testes contra Vite dev server via Playwright:
+Executa 13 testes contra Vite dev server via Playwright:
 
-1. **Page title** — title e "Mob Cannon"
-2. **Debug hooks exist** — `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x` presentes
+1. **Page title** — title e "Neon Swarm Cannon"
+2. **Debug hooks exist** — `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x`, `debug_force_gameover` presentes
 3. **Shop upgrade fire** — compra upgrade de fire com localStorage seed, verifica deducao de moedas
 4. **Shop upgrade lives** — compra upgrade de lives
-5. **Start run + time advance** — inicia run com Space, avanca 45s, verifica estado valido
-6. **Forward-only invariant + keyboard movement** — cannon angle = -90, ArrowLeft/Right move sem alterar angulo
-7. **debug_move_cannon_to_x** — move canhao horizontalmente com o hook
+5. **Shop insufficient coins / idempotency** — compra sem moedas suficientes nao altera estado; compra com moedas exatas funciona
+6. **Max upgrade idempotency** — upgrades no nivel maximo nao gastam moedas nem ultrapassam cap
+7. **Start run + time advance** — inicia run com Space, avanca 45s, verifica estado valido
+8. **Forward-only invariant + keyboard movement** — cannon angle = -90, ArrowLeft/Right move sem alterar angulo
+9. **debug_move_cannon_to_x** — move canhao horizontalmente com o hook
+10. **debug_force_gameover** — forca gameover, valida snapshot e restart
+11. **Mobile canvas visible** — viewport 393x852 renderiza canvas portrait com `FIT`, sem crop
+12. **Mobile tap starts run** — tap no canvas inicia a run
+13. **Mobile drag moves cannon** — drag horizontal move o canhao e preserva angulo -90
 
 ### Limites dos Smoke Tests Actuais
 
 Nao cobrem ainda:
-- Estado de game over e overlay de restart
 - Layering de powerups (shield + rapid em simultaneo)
-- Compra de upgrade quando moedas sao insuficientes
-- Compra de upgrade no nivel maximo
-- Path de pointer/mobile drag (testavel com `debug_move_cannon_to_x` como proxy)
 - Escalamento de barreiras e base por checkpoint
+- Regressao visual automatizada do sprite do canhao Option B
+- Regressao visual automatizada dos projeteis de energia cyan
+- Screenshots comparativos desktop/mobile como criterio automatico de layout
 
 ---
 
@@ -168,6 +185,8 @@ src/game/
   debugHooks.ts   — Declaracoes de tipo e comentarios para hooks de debug em window
 src/
   main.ts         — unica Phaser Scene (GameScene); orquestracao, input, rendering, game loop, persistencia
+public/assets/
+  cannon-hover-option-b.png — Sprite raster do canhao Option B carregado no preload do Phaser
 ```
 
 ---
@@ -177,9 +196,11 @@ src/
 O MVP atual (f30c9d4) esta pronto quando:
 
 - [x] `npm run build` passa com exit code 0
-- [x] `npm run smoke` passa 7/7
+- [x] `npm run smoke` passa 13/13
 - [x] Menu mostra best score, best distance, coins e upgrades
 - [x] Disparo automatico do canhao funciona
+- [x] Canhao Option B renderiza como sprite raster em vez de aproximacao vetorial
+- [x] Projeteis azuis renderizam como energia cyan com trail e nucleo brilhante
 - [x] Angulo do canhao e sempre -90 (invariante verificado)
 - [x] Gates x2, x3, +10 multiplicam mobs azuis
 - [x] Mobs vermelhos descem e colidem
@@ -236,13 +257,25 @@ Objetos Phaser (containers, imagens) sao criados com `scene.add` e destruidos ma
 
 **6. HUD / area superior congestionada**
 
-A area do topo (wave, HP da base, checkpoint count, lives, powerup status) pode ficar visualmente saturada. Separar em containers com z-indices claros ajudaria.
+A area do topo (wave, HP da base, checkpoint count, lives, powerup status) foi compactada, mas ainda deve ser acompanhada em playtests com ondas altas. Separar em containers/sistemas dedicados com z-indices claros continua recomendado.
 
-**7. Contraste visual de gates**
+**7. Escala responsiva e safe area**
+
+`Phaser.Scale.FIT` preserva a proporcao do canvas e evita cortes em viewports mobile e desktop. UI fixa deve ficar dentro da safe area central, e novos overlays precisam ser verificados em 393x852 e desktop landscape.
+
+**8. Overlay de fim de partida**
+
+O overlay de game over precisa permanecer dentro da safe area e usar textos multiline, evitando linhas longas que cortam em mobile.
+
+**9. Loja e affordance de upgrades**
+
+Estados de upgrade devem indicar `Buy for`, `Need` ou `MAX`, com diferenca visual clara entre compravel, bloqueado por moedas e maximizado.
+
+**10. Contraste visual de gates**
 
 Gates podiam ter mais destaque visual para se distinguirem do fundo. Considerar adicionar glow ou animacao simples.
 
-**8. Banner "DRAG TO MOVE"**
+**11. Banner "DRAG TO MOVE"**
 
 Observado como baixa visibilidade no menu mobile. Ajustar cor, tamanho ou posicao.
 

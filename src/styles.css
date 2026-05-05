@@ -15,7 +15,7 @@ body {
   height: 100dvh;
   background: radial-gradient(ellipse at 50% 40%, #0e2a38 0%, #071218 70%);
   font-family: Arial, Helvetica, sans-serif;
-  /* No safe-area-inset padding — ENVELOP scales the portrait canvas to cover the full viewport. */
+  /* Phaser FIT centers the full portrait canvas without cropping or distortion. */
 }
 
 canvas {

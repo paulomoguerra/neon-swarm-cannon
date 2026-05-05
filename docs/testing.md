@@ -1,4 +1,4 @@
-# Mob Cannon — Technical Hardening
+# Neon Swarm Cannon — Technical Hardening
 
 ## Build
 
@@ -16,7 +16,7 @@ npm run smoke
 
 Runs automated Playwright smoke tests against a local Vite dev server (port 5173). Verifies:
 
-- Browser title is "Mob Cannon"
+- Browser title is "Neon Swarm Cannon"
 - Debug hooks `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x`, `debug_force_gameover` are present
 - Shop upgrades correctly deduct coins and increment upgrade levels
 - Shop purchase with insufficient coins is a no-op (coins/levels unchanged); exact-coin purchase succeeds; zero-coin purchase fails safely (idempotent)
@@ -29,7 +29,7 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 
 **Mobile viewport (3 tests, 393x852 — iPhone 14 Pro):**
 
-- Canvas renders with nonzero dimensions under mobile viewport, remains portrait-first (height > width), and fills the viewport (no FIT letterboxing)
+- Canvas renders with nonzero dimensions under mobile viewport, remains portrait-first (height > width), and fits inside the viewport without crop or distortion.
 - Mobile tap on canvas starts a run (mode transitions to "playing")
 - Mobile horizontal drag moves cannon horizontally; cannon angle stays at -90°
 

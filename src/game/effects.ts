@@ -6,10 +6,11 @@ export function showFloatingText(
   y: number,
   text: string,
   color = "#ffffff",
+  fontSize = 19,
 ): void {
   const label = scene.add.text(x, y, text, {
     fontFamily: "Arial",
-    fontSize: "19px",
+    fontSize: `${fontSize}px`,
     color,
     fontStyle: "bold",
     stroke: "#203044",

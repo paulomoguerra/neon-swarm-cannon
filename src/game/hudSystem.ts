@@ -109,8 +109,8 @@ export function updateMenuHud(els: MenuHudElements, opts: MenuHudOptions = {}): 
   els.coinsText.setText(formatCoinsLine(tc)).setVisible(true);
 
   const ups = loadUpgradeState();
-  els.upgradeFireText.setText(formatFireUpgradeLine(ups.fireLevel)).setVisible(true);
-  els.upgradeLivesText.setText(formatLivesUpgradeLine(ups.livesLevel)).setVisible(true);
+  els.upgradeFireText.setText(formatFireUpgradeLine(ups.fireLevel, tc)).setVisible(true);
+  els.upgradeLivesText.setText(formatLivesUpgradeLine(ups.livesLevel, tc)).setVisible(true);
 
   // Hide HUD elements during menu
   els.hudLeftText.setVisible(false);

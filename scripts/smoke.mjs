@@ -1,5 +1,5 @@
 /**
- * Smoke test for Mob Cannon.
+ * Smoke test for Neon Swarm Cannon.
  * Starts the Vite dev server, runs Playwright checks, then kills the server.
  *
  * Usage: node scripts/smoke.mjs
@@ -99,8 +99,8 @@ function assert(condition, message) {
 
 async function testPageTitle(page) {
   const title = await page.title();
-  assert(title === "Mob Cannon", `Expected title "Mob Cannon", got "${title}"`);
-  console.log("  [PASS] document.title === 'Mob Cannon'");
+  assert(title === "Neon Swarm Cannon", `Expected title "Neon Swarm Cannon", got "${title}"`);
+  console.log("  [PASS] document.title === 'Neon Swarm Cannon'");
 }
 
 async function testDebugHooksExist(page) {
@@ -490,16 +490,15 @@ async function testMobileCanvasVisible(page) {
   assert(box.height > box.width,
     `Canvas should be portrait (height ${Math.round(box.height)} > width ${Math.round(box.width)})`);
   console.log(`  [PASS] canvas is portrait: ${Math.round(box.width)}x${Math.round(box.height)} (width < height)`);
-  // Assert canvas fills the full viewport — not letterboxed.
-  // On a 393x852 viewport the game should consume nearly all of it.
-  // ENVELOP scales the 540-wide portrait canvas to fill the viewport, cropping
-  // horizontally if needed. Canvas bounding box may be wider than viewport (negative x).
-  // Width should be >= 390 and height >= 845 to confirm no letterboxing.
+  // Assert the full game is visible without crop. FIT may leave vertical room on
+  // tall phones, but the whole portrait playfield must fit inside the viewport.
   assert(box.width >= 390,
-    `Canvas width should be >= 390 on a 393-wide viewport, got ${Math.round(box.width)} (may indicate letterboxing)`);
-  assert(box.height >= 845,
-    `Canvas height should be >= 845 on a 852-tall viewport, got ${Math.round(box.height)} (may indicate letterboxing)`);
-  console.log(`  [PASS] canvas fills viewport: ${Math.round(box.width)}x${Math.round(box.height)} (>= 390x845)`);
+    `Canvas width should use the available mobile width, got ${Math.round(box.width)}`);
+  assert(box.height <= 852,
+    `Canvas height should fit inside the mobile viewport without crop, got ${Math.round(box.height)}`);
+  assert(box.x >= -1 && box.y >= -1,
+    `Canvas should not be cropped offscreen, got x=${Math.round(box.x)}, y=${Math.round(box.y)}`);
+  console.log(`  [PASS] canvas fits viewport without crop: ${Math.round(box.width)}x${Math.round(box.height)}`);
 }
 
 async function testMobileTapStartsRun(page) {
@@ -546,8 +545,8 @@ async function testMobileDragMovesCannon(page) {
   const cx = toClientX(stateBefore.cannon.x);
   const cy = box.y + (stateBefore.cannon.y / 960) * box.height;
   const dragLen = 90;
-  // Drag right from the cannon's current visual position. ENVELOP may crop
-  // horizontally on wide viewports, so we compute client coords from cannon.x.
+  // Drag right from the cannon's current visual position. Compute client coords
+  // from logical game coordinates so the test works at any FIT scale.
   await page.mouse.move(cx, cy);
   await page.mouse.down();
   await page.mouse.move(cx + dragLen, cy, { steps: 5 });
@@ -589,7 +588,7 @@ async function testMobileDragMovesCannon(page) {
 // --- Main ---
 
 async function main() {
-  console.log("\n=== Mob Cannon Smoke Tests ===\n");
+  console.log("\n=== Neon Swarm Cannon Smoke Tests ===\n");
 
   let passed = 0;
   let failed = 0;

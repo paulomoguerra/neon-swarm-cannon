@@ -67,11 +67,11 @@ export function drawWorld(
 
   if (showHud) {
     uiGraphics.clear();
-    // Single cohesive top HUD bar — dark, rounded, spans most of width — portrait narrow
+    // Single cohesive top HUD bar kept inside the mobile/desktop safe column.
     uiGraphics.fillStyle(0x0e2433, 0.72);
-    uiGraphics.fillRoundedRect(12, 12, GAME_WIDTH - 24, 52, 12);
+    uiGraphics.fillRoundedRect(56, 12, GAME_WIDTH - 112, 58, 12);
     uiGraphics.lineStyle(2, 0x3a6080, 0.7);
-    uiGraphics.strokeRoundedRect(12, 12, GAME_WIDTH - 24, 52, 12);
+    uiGraphics.strokeRoundedRect(56, 12, GAME_WIDTH - 112, 58, 12);
   }
 }
 

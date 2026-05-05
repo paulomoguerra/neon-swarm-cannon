@@ -27,22 +27,24 @@ export function formatCoinsLine(totalCoins: number): string {
 
 /**
  * Returns the fire-rate upgrade line for the menu.
- * Touch-first: `Tap Fire Rate Lv{N}  (C coins)` or `Tap Fire Rate MAX`
+ * Touch-first: labels whether the upgrade can be bought now or needs coins.
  */
-export function formatFireUpgradeLine(fireLevel: number): string {
-  if (fireLevel >= UPGRADE_MAX_LEVEL) return "Tap Fire Rate MAX";
+export function formatFireUpgradeLine(fireLevel: number, totalCoins = 0): string {
+  if (fireLevel >= UPGRADE_MAX_LEVEL) return "Fire Rate MAX";
   const cost = UPGRADE_FIRE_COSTS[fireLevel];
-  return `Tap Fire Rate Lv${fireLevel + 1}  (${cost} coins)`;
+  const action = totalCoins >= cost ? `Buy for ${cost}` : `Need ${cost}`;
+  return `Fire Rate Lv${fireLevel + 1}\n${action} coins`;
 }
 
 /**
  * Returns the lives upgrade line for the menu.
- * Touch-first: `Tap Lives Lv{N}  (C coins)` or `Tap Lives MAX`
+ * Touch-first: labels whether the upgrade can be bought now or needs coins.
  */
-export function formatLivesUpgradeLine(livesLevel: number): string {
-  if (livesLevel >= UPGRADE_MAX_LEVEL) return "Tap Lives MAX";
+export function formatLivesUpgradeLine(livesLevel: number, totalCoins = 0): string {
+  if (livesLevel >= UPGRADE_MAX_LEVEL) return "Lives MAX";
   const cost = UPGRADE_LIVES_COSTS[livesLevel];
-  return `Tap Lives Lv${livesLevel + 1}  (${cost} coins)`;
+  const action = totalCoins >= cost ? `Buy for ${cost}` : `Need ${cost}`;
+  return `Lives Lv${livesLevel + 1}\n${action} coins`;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,7 +58,7 @@ export function formatHudLeft(score: number, distanceMeters: number): string {
 
 /** Center HUD: wave and checkpoints destroyed. */
 export function formatHudCenter(wave: number, checkpointsDestroyed: number): string {
-  return `Wave ${wave}   CP ${checkpointsDestroyed}`;
+  return `Wave ${wave}\nCP ${checkpointsDestroyed}`;
 }
 
 /** Right HUD: red mob count and base HP.
@@ -82,7 +84,7 @@ export function formatLivesLine(cannonLives: number): string {
  */
 export function formatPowerupStatus(shieldTimer: number, rapidTimer: number): string {
   const parts: string[] = [];
-  if (shieldTimer > 0) parts.push(`SH:${shieldTimer.toFixed(0)}s`);
-  if (rapidTimer > 0) parts.push(`RF:${rapidTimer.toFixed(0)}s`);
+  if (shieldTimer > 0) parts.push(`Shield ${shieldTimer.toFixed(0)}s`);
+  if (rapidTimer > 0) parts.push(`Rapid ${rapidTimer.toFixed(0)}s`);
   return parts.join("  ");
 }
