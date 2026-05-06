@@ -160,6 +160,11 @@ class GameScene extends Phaser.Scene {
 
   preload(): void {
     this.load.image("cannon-hover-option-b", "/assets/cannon-hover-option-b.png");
+    this.load.image("enemy-grunt", "/assets/enemy-grunt.png");
+    this.load.image("enemy-runner", "/assets/enemy-runner.png");
+    this.load.image("enemy-brute", "/assets/enemy-brute.png");
+    this.load.image("enemy-shielded", "/assets/enemy-shielded.png");
+    this.load.image("enemy-bomber", "/assets/enemy-bomber.png");
   }
 
   create(): void {

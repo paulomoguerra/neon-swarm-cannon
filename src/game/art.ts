@@ -38,6 +38,14 @@ const MOB_COLORS: Record<Team, { body: number; outline: number; glow: number }> 
   red: { body: 0xf05050, outline: 0x8b1a1a, glow: 0xcc3030 },
 };
 
+const ENEMY_DRONES = [
+  { key: "enemy-grunt", scale: 0.105 },
+  { key: "enemy-runner", scale: 0.115 },
+  { key: "enemy-brute", scale: 0.11 },
+  { key: "enemy-shielded", scale: 0.12 },
+  { key: "enemy-bomber", scale: 0.15 },
+] as const;
+
 export function createMob(scene: Phaser.Scene, team: Team, x: number, y: number): Phaser.GameObjects.Container {
   const container = scene.add.container(x, y);
   const colors = MOB_COLORS[team];
@@ -52,6 +60,17 @@ export function createMob(scene: Phaser.Scene, team: Team, x: number, y: number)
     const shine = scene.add.ellipse(-4, -6, 7, 5, 0xffffff, 0.42);
     const shadow = scene.add.ellipse(0, 15, 24, 8, 0x000000, 0.18);
     container.add([trail, glow, shadow, outer, core, shine]);
+    return container;
+  }
+
+  const availableDrones = ENEMY_DRONES.filter((drone) => scene.textures.exists(drone.key));
+  if (availableDrones.length > 0) {
+    const drone = availableDrones[Phaser.Math.Between(0, availableDrones.length - 1)];
+    const sprite = scene.add.image(0, 0, drone.key);
+    sprite.setOrigin(0.5, 0.56);
+    sprite.setScale(drone.scale);
+    sprite.setName(drone.key);
+    container.add(sprite);
     return container;
   }
 

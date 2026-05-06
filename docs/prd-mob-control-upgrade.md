@@ -66,6 +66,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 
 ### 4.3 Mobs Vermelhos
 - Spawnados pela base inimiga em intervalos (`redSpawnInterval` comeca em 2.2s, decai por wave ate 0.75s minimo).
+- Renderizados como familia visual de drones corrompidos em `public/assets/enemy-*.png`: Grunt, Runner, Brute, Shielded e Bomber. No estado atual, as variantes sao cosmeticas e usam o mesmo comportamento/HP dos mobs vermelhos existentes; roles mecanicas ficam para uma fase futura de balanceamento.
 - Velocidade comeca em 60 px/s e aumenta 5 px/s por wave, ate +55 bonus.
 - Descendem em direcao ao canhao.
 
@@ -187,6 +188,7 @@ src/
   main.ts         — unica Phaser Scene (GameScene); orquestracao, input, rendering, game loop, persistencia
 public/assets/
   cannon-hover-option-b.png — Sprite raster do canhao Option B carregado no preload do Phaser
+  enemy-*.png       — Sprites raster da familia visual de drones vermelhos corrompidos
 ```
 
 ---
@@ -204,6 +206,7 @@ O MVP atual (f30c9d4) esta pronto quando:
 - [x] Angulo do canhao e sempre -90 (invariante verificado)
 - [x] Gates x2, x3, +10 multiplicam mobs azuis
 - [x] Mobs vermelhos descem e colidem
+- [x] Mobs vermelhos renderizam como familia visual de drones corrompidos
 - [x] Barreiras e base perdem HP
 - [x] Destruir base atua como checkpoint e continua o jogo
 - [x] Sistema de vidas funciona
