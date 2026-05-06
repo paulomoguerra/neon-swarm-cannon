@@ -125,6 +125,48 @@ export const COIN_PER_KILL = 1;
 export const COIN_PER_CHECKPOINT = 15;
 export const COIN_PER_BASE_DESTROY = 50;
 
+// Session-only weapon economy. Tech is intentionally in-memory and resets on
+// page refresh; persistent coin upgrades stay separate.
+export const SESSION_TECH_PER_KILL = 1;
+export const SESSION_TECH_PER_CHECKPOINT = 10;
+export const WEAPON_MAX_LEVEL = 3;
+export const WEAPON_KINDS = ["laser", "spread", "rail"] as const;
+export const WEAPON_CONFIG = {
+  laser: {
+    label: "Laser Bolt",
+    unlockCost: 0,
+    upgradeCosts: [8, 18],
+    fireIntervalMultiplier: 1,
+    projectileCount: 1,
+    spreadVx: 0,
+    speedMultiplier: 1,
+    damageByLevel: [1, 1, 2],
+    pierceByLevel: [0, 0, 0],
+  },
+  spread: {
+    label: "Spread Pulse",
+    unlockCost: 12,
+    upgradeCosts: [16, 32],
+    fireIntervalMultiplier: 1.45,
+    projectileCount: 3,
+    spreadVx: 92,
+    speedMultiplier: 1,
+    damageByLevel: [1, 1, 2],
+    pierceByLevel: [0, 0, 0],
+  },
+  rail: {
+    label: "Rail Lance",
+    unlockCost: 24,
+    upgradeCosts: [28, 50],
+    fireIntervalMultiplier: 2.05,
+    projectileCount: 1,
+    spreadVx: 0,
+    speedMultiplier: 1.24,
+    damageByLevel: [1, 2, 3],
+    pierceByLevel: [2, 3, 4],
+  },
+} as const;
+
 // Upgrade settings
 export const UPGRADE_FIRE_COSTS = [60, 140, 280];
 export const UPGRADE_LIVES_COSTS = [40, 100, 200];

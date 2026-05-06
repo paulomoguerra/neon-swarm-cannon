@@ -108,10 +108,46 @@ async function testDebugHooksExist(page) {
     return (
       typeof window.render_game_to_text === "function" &&
       typeof window.advanceTime === "function" &&
-      typeof window.debug_shop_action === "function"
+      typeof window.debug_shop_action === "function" &&
+      typeof window.debug_weapon_shop_action === "function" &&
+      typeof window.debug_grant_session_tech === "function"
     );
   }, { timeout: 10_000 });
-  console.log("  [PASS] debug hooks exist: render_game_to_text, advanceTime, debug_shop_action");
+  console.log("  [PASS] debug hooks exist: render_game_to_text, advanceTime, shop + weapon helpers");
+}
+
+async function testDefaultWeaponState(page) {
+  const state = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(state.weapons !== undefined, "snapshot must expose weapons state");
+  assert(state.weapons.equippedWeapon === "laser", `Default equipped weapon must be laser, got ${state.weapons.equippedWeapon}`);
+  assert(state.weapons.sessionTech === 0, `Session Tech should start at 0, got ${state.weapons.sessionTech}`);
+  assert(state.weapons.weapons.laser.unlocked === true, "Laser Bolt must be unlocked by default");
+  assert(state.weapons.weapons.spread.unlocked === false, "Spread Pulse should start locked");
+  assert(state.weapons.weapons.rail.unlocked === false, "Rail Lance should start locked");
+  console.log("  [PASS] default weapon state: Laser Bolt equipped, Tech=0, advanced weapons locked");
+}
+
+async function testWeaponShopHelpers(page) {
+  await page.evaluate(() => window.debug_grant_session_tech(120));
+
+  const spreadUnlock = await page.evaluate(() => window.debug_weapon_shop_action("spread", "upgrade"));
+  assert(spreadUnlock !== null, "debug_weapon_shop_action spread unlock returned null");
+  assert(spreadUnlock.weapons.weapons.spread.unlocked === true, "Spread Pulse should unlock");
+  assert(spreadUnlock.weapons.equippedWeapon === "spread", "Spread Pulse should equip after unlock");
+
+  const spreadUpgrade = await page.evaluate(() => window.debug_weapon_shop_action("spread", "upgrade"));
+  assert(spreadUpgrade.weapons.weapons.spread.level === 2, `Spread Pulse should upgrade to level 2, got ${spreadUpgrade.weapons.weapons.spread.level}`);
+
+  const railUnlock = await page.evaluate(() => window.debug_weapon_shop_action("rail", "upgrade"));
+  assert(railUnlock.weapons.weapons.rail.unlocked === true, "Rail Lance should unlock");
+  assert(railUnlock.weapons.equippedWeapon === "rail", "Rail Lance should equip after unlock");
+
+  const railUpgrade = await page.evaluate(() => window.debug_weapon_shop_action("rail", "upgrade"));
+  assert(railUpgrade.weapons.weapons.rail.level === 2, `Rail Lance should upgrade to level 2, got ${railUpgrade.weapons.weapons.rail.level}`);
+
+  const laserEquip = await page.evaluate(() => window.debug_weapon_shop_action("laser", "equip"));
+  assert(laserEquip.weapons.equippedWeapon === "laser", "Laser Bolt should equip via helper");
+  console.log("  [PASS] weapon shop helpers unlock/equip/upgrade Spread Pulse and Rail Lance");
 }
 
 async function testShopUpgradeFire(page) {
@@ -286,7 +322,7 @@ async function testStartRunAndAdvance(page) {
   // Required fields
   for (const field of [
     "mode", "cannon", "score", "distanceMeters", "wave",
-    "checkpointsDestroyed", "cannonLives", "coins", "totalCoins", "upgrades", "powerups",
+    "checkpointsDestroyed", "cannonLives", "coins", "totalCoins", "upgrades", "weapons", "powerups",
   ]) {
     assert(
       stateAfterAdvance[field] !== undefined,
@@ -295,6 +331,12 @@ async function testStartRunAndAdvance(page) {
   }
 
   console.log(`  [PASS] run + advance 45s: mode=${stateAfterAdvance.mode}, score=${stateAfterAdvance.score}, dist=${stateAfterAdvance.distanceMeters}m`);
+
+  assert(
+    stateAfterAdvance.weapons.sessionTech >= stateAfterAdvance.kills,
+    `Session Tech should include at least +1 per kill, got tech=${stateAfterAdvance.weapons.sessionTech}, kills=${stateAfterAdvance.kills}`
+  );
+  console.log(`  [PASS] session Tech accrues during play: tech=${stateAfterAdvance.weapons.sessionTech}, kills=${stateAfterAdvance.kills}, checkpoints=${stateAfterAdvance.checkpointsDestroyed}`);
 
   // If gameover, verify no crash and canvas is present
   if (stateAfterAdvance.mode === "gameover") {
@@ -392,14 +434,21 @@ async function testGameoverRestartHook(page) {
   assert(parsed !== null, "render_game_to_text must return valid JSON after gameover");
   assert(parsed.mode === "gameover", `Snapshot mode must be 'gameover', got '${parsed.mode}'`);
 
-  // Press Space to restart — should return to playing
+  // Press Space from gameover returns to arsenal/menu first
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(300);
+
+  const stateAfterMenu = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(stateAfterMenu.mode === "menu", `Expected mode 'menu' after gameover CTA, got '${stateAfterMenu.mode}'`);
+
+  // Next Space starts the following run from the menu.
   await page.keyboard.press("Space");
   await page.waitForTimeout(300);
 
   const stateAfterRestart = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
-  assert(stateAfterRestart.mode === "playing", `Expected mode 'playing' after Space restart, got '${stateAfterRestart.mode}'`);
+  assert(stateAfterRestart.mode === "playing", `Expected mode 'playing' after menu Space, got '${stateAfterRestart.mode}'`);
 
-  console.log("  [PASS] debug_force_gameover: gameover -> restart -> playing");
+  console.log("  [PASS] debug_force_gameover: gameover -> menu/shop -> playing");
 }
 
 async function testDebugMoveCannonToX(page) {
@@ -623,6 +672,16 @@ async function main() {
       }
 
       try {
+        console.log("[TEST] Default weapon state");
+        await testDefaultWeaponState(page);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "Default weapon state", error: e.message });
+        throw e;
+      }
+
+      try {
         console.log("[TEST] Shop upgrade — fire");
         await testShopUpgradeFire(page);
         passed++;
@@ -659,6 +718,16 @@ async function main() {
       } catch (e) {
         failed++;
         errors.push({ test: "Max upgrade — idempotency at level cap", error: e.message });
+        throw e;
+      }
+
+      try {
+        console.log("[TEST] Session Arsenal helpers");
+        await testWeaponShopHelpers(page);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "Session Arsenal helpers", error: e.message });
         throw e;
       }
 

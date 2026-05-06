@@ -5,7 +5,8 @@
  * menu and HUD rendering. No side effects, no Phaser imports.
  */
 
-import { UPGRADE_FIRE_COSTS, UPGRADE_LIVES_COSTS, UPGRADE_MAX_LEVEL } from "./config";
+import { UPGRADE_FIRE_COSTS, UPGRADE_LIVES_COSTS, UPGRADE_MAX_LEVEL, WEAPON_CONFIG, WEAPON_MAX_LEVEL } from "./config";
+import type { WeaponKind, WeaponSessionState } from "./types";
 
 // ---------------------------------------------------------------------------
 // Menu formatting
@@ -23,6 +24,10 @@ export function formatBestLine(bestScore: number, bestDistance: number): string 
 /** Returns the coins line shown on the menu. */
 export function formatCoinsLine(totalCoins: number): string {
   return `Coins: ${totalCoins}`;
+}
+
+export function formatTechLine(sessionTech: number): string {
+  return `Tech: ${sessionTech}`;
 }
 
 /**
@@ -45,6 +50,24 @@ export function formatLivesUpgradeLine(livesLevel: number, totalCoins = 0): stri
   const cost = UPGRADE_LIVES_COSTS[livesLevel];
   const action = totalCoins >= cost ? `Buy for ${cost}` : `Need ${cost}`;
   return `Lives Lv${livesLevel + 1}\n${action} coins`;
+}
+
+export function formatWeaponShopLine(kind: WeaponKind, session: WeaponSessionState): string {
+  const cfg = WEAPON_CONFIG[kind];
+  const state = session.weapons[kind];
+  if (!state.unlocked) {
+    const action = session.sessionTech >= cfg.unlockCost ? `Unlock ${cfg.unlockCost}T` : `Need ${cfg.unlockCost}T`;
+    return `${cfg.label}\nLocked\n${action}`;
+  }
+  if (session.equippedWeapon !== kind) {
+    return `${cfg.label}\nLv${state.level} Unlocked\nEquip`;
+  }
+  if (state.level >= WEAPON_MAX_LEVEL) {
+    return `${cfg.label}\nLv${state.level} Equipped\nMAX`;
+  }
+  const cost = cfg.upgradeCosts[state.level - 1];
+  const action = session.sessionTech >= cost ? `Upgrade ${cost}T` : `Need ${cost}T`;
+  return `${cfg.label}\nLv${state.level} Equipped\n${action}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -87,4 +110,8 @@ export function formatPowerupStatus(shieldTimer: number, rapidTimer: number): st
   if (shieldTimer > 0) parts.push(`Shield ${shieldTimer.toFixed(0)}s`);
   if (rapidTimer > 0) parts.push(`Rapid ${rapidTimer.toFixed(0)}s`);
   return parts.join("  ");
+}
+
+export function formatWeaponHudLine(kind: WeaponKind, level: number): string {
+  return `${WEAPON_CONFIG[kind].label} Lv${level}`;
 }

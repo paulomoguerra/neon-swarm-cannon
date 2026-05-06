@@ -2,6 +2,20 @@ import Phaser from "phaser";
 
 export type Mode = "menu" | "playing" | "gameover" | "victory";
 export type Team = "blue" | "red";
+export type WeaponKind = "laser" | "spread" | "rail";
+export type EnemyKind = "grunt" | "runner" | "brute" | "shielded" | "bomber";
+export type EnemyAttackKind = "contact";
+
+export type WeaponUpgradeState = {
+  unlocked: boolean;
+  level: number;
+};
+
+export type WeaponSessionState = {
+  equippedWeapon: WeaponKind;
+  sessionTech: number;
+  weapons: Record<WeaponKind, WeaponUpgradeState>;
+};
 
 export type Mob = {
   id: number;
@@ -10,6 +24,11 @@ export type Mob = {
   hp: number;
   vx: number;
   vy: number;
+  weaponKind?: WeaponKind;
+  damage?: number;
+  pierceRemaining?: number;
+  enemyKind?: EnemyKind;
+  attackKind?: EnemyAttackKind;
 };
 
 export type GateKind = "multiply" | "add";

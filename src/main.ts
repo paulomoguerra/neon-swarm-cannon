@@ -19,6 +19,11 @@ import {
   COIN_PER_KILL,
   COIN_PER_CHECKPOINT,
   COIN_PER_BASE_DESTROY,
+  SESSION_TECH_PER_KILL,
+  SESSION_TECH_PER_CHECKPOINT,
+  WEAPON_CONFIG,
+  WEAPON_KINDS,
+  WEAPON_MAX_LEVEL,
   UPGRADE_FIRE_COSTS,
   UPGRADE_LIVES_COSTS,
   UPGRADE_LIVES_BONUS,
@@ -44,13 +49,16 @@ import {
   startingLivesFromUpgrades,
 } from "./game/progression";
 import { calculateWave, calculateDistanceDelta, calculateScore, calculateRedSpawnInterval, calculateRedSpeed } from "./game/runMath";
-import type { Cannon, Gate, Mob, Mode, EnemyBase, Barrier, Powerup, PowerupKind, UpgradeState } from "./game/types";
+import type { Cannon, Gate, Mob, Mode, EnemyBase, Barrier, Powerup, PowerupKind, UpgradeState, WeaponKind, WeaponSessionState, EnemyKind } from "./game/types";
 import type { ShopResult } from "./game/debugHooks";
 import {
   formatBestLine,
   formatCoinsLine,
   formatFireUpgradeLine,
   formatLivesUpgradeLine,
+  formatTechLine,
+  formatWeaponHudLine,
+  formatWeaponShopLine,
 } from "./game/uiText";
 import { resolveMenuPointer, clampCannonX, stepKeyboardCannon, MENU_UPGRADE_BOUNDS } from "./game/inputSystem";
 import { updatePlayingHud, clearPlayingHud, updateMenuHud } from "./game/hudSystem";
@@ -103,6 +111,15 @@ class GameScene extends Phaser.Scene {
   private coins = 0;
   private totalCoins = 0;
   private upgradeState: UpgradeState = { fireLevel: 0, livesLevel: 0 };
+  private weaponSession: WeaponSessionState = {
+    equippedWeapon: "laser",
+    sessionTech: 0,
+    weapons: {
+      laser: { unlocked: true, level: 1 },
+      spread: { unlocked: false, level: 0 },
+      rail: { unlocked: false, level: 0 },
+    },
+  };
 
   // Power-up state
   private powerups: Powerup[] = [];
@@ -144,6 +161,10 @@ class GameScene extends Phaser.Scene {
   private coinsText!: Phaser.GameObjects.Text;
   private upgradeFireText!: Phaser.GameObjects.Text;
   private upgradeLivesText!: Phaser.GameObjects.Text;
+  private techText!: Phaser.GameObjects.Text;
+  private weaponText!: Phaser.GameObjects.Text;
+  private weaponCardBgs: Phaser.GameObjects.Graphics[] = [];
+  private weaponCardTexts: Phaser.GameObjects.Text[] = [];
   private powerupStatusText!: Phaser.GameObjects.Text;
   private promptText!: Phaser.GameObjects.Text;
   private cannonAngleText!: Phaser.GameObjects.Text;
@@ -152,6 +173,9 @@ class GameScene extends Phaser.Scene {
   // Position constants for prompt text centering - portrait thumb-zone optimized.
   private static readonly MENU_PROMPT_Y = 468;
   private static readonly END_RESTART_PROMPT_Y = 562;
+  private static readonly WEAPON_CARD_Y = 320;
+  private static readonly WEAPON_CARD_W = 128;
+  private static readonly WEAPON_CARD_H = 88;
   private promptTween?: Phaser.Tweens.Tween;
 
   constructor() {
@@ -333,6 +357,39 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.upgradeLivesText.setDepth(110);
 
+    this.techText = this.add.text(GAME_WIDTH / 2, 300, "", {
+      fontFamily: "Arial",
+      fontSize: "13px",
+      color: "#7fffe9",
+      fontStyle: "bold",
+      stroke: "#001014",
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    this.techText.setDepth(110);
+
+    this.weaponCardBgs = [];
+    this.weaponCardTexts = [];
+    WEAPON_KINDS.forEach((kind, index) => {
+      const bg = this.add.graphics();
+      bg.setDepth(109);
+      bg.setVisible(false);
+      this.weaponCardBgs.push(bg);
+
+      const bounds = this.getWeaponCardBounds(index);
+      const text = this.add.text(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, "", {
+        fontFamily: "Arial",
+        fontSize: "11px",
+        color: kind === "rail" ? "#bdf8ff" : "#d8fbff",
+        fontStyle: "bold",
+        stroke: "#001014",
+        strokeThickness: 3,
+        align: "center",
+      }).setOrigin(0.5);
+      text.setDepth(110);
+      text.setVisible(false);
+      this.weaponCardTexts.push(text);
+    });
+
     // Power-up status indicator (small HUD element)
     this.powerupStatusText = this.add.text(GAME_WIDTH / 2, 78, "", {
       fontFamily: "Arial",
@@ -343,6 +400,17 @@ class GameScene extends Phaser.Scene {
       strokeThickness: 2,
     }).setOrigin(0.5, 0);
     this.powerupStatusText.setDepth(110);
+
+    this.weaponText = this.add.text(GAME_WIDTH / 2, 58, "", {
+      fontFamily: "Arial",
+      fontSize: "12px",
+      color: "#7fffe9",
+      fontStyle: "bold",
+      stroke: "#000000",
+      strokeThickness: 2,
+    }).setOrigin(0.5, 0);
+    this.weaponText.setDepth(110);
+    this.weaponText.setVisible(false);
 
     // Prompt text — used for both menu CTA and end-state restart — larger for mobile
     this.promptText = this.add.text(GAME_WIDTH / 2, 468, "START RUN", {
@@ -456,6 +524,44 @@ class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(bx, by, bw, bh, 8);
   }
 
+  private getWeaponCardBounds(index: number): { x: number; y: number; width: number; height: number } {
+    const gap = 10;
+    const totalW = WEAPON_KINDS.length * GameScene.WEAPON_CARD_W + (WEAPON_KINDS.length - 1) * gap;
+    const x = GAME_WIDTH / 2 - totalW / 2 + index * (GameScene.WEAPON_CARD_W + gap);
+    return {
+      x,
+      y: GameScene.WEAPON_CARD_Y,
+      width: GameScene.WEAPON_CARD_W,
+      height: GameScene.WEAPON_CARD_H,
+    };
+  }
+
+  private drawWeaponCardBg(kind: WeaponKind, index: number): void {
+    const bg = this.weaponCardBgs[index];
+    const state = this.weaponSession.weapons[kind];
+    const equipped = this.weaponSession.equippedWeapon === kind;
+    const cfg = WEAPON_CONFIG[kind];
+    const cost = !state.unlocked
+      ? cfg.unlockCost
+      : state.level < WEAPON_MAX_LEVEL
+        ? cfg.upgradeCosts[state.level - 1]
+        : 0;
+    const canAfford = !state.unlocked
+      ? this.weaponSession.sessionTech >= cost
+      : state.level < WEAPON_MAX_LEVEL && this.weaponSession.sessionTech >= cost;
+    const bounds = this.getWeaponCardBounds(index);
+
+    bg.clear();
+    bg.fillStyle(0x000000, 0.28);
+    bg.fillRoundedRect(bounds.x + 2, bounds.y + 3, bounds.width, bounds.height, 8);
+    const fill = !state.unlocked ? 0x232832 : equipped ? 0x0b4f5c : 0x17323e;
+    bg.fillStyle(fill, 0.92);
+    bg.fillRoundedRect(bounds.x, bounds.y, bounds.width, bounds.height, 8);
+    const border = equipped ? 0x7fffe9 : canAfford ? 0x44ff88 : 0x557080;
+    bg.lineStyle(equipped ? 2 : 1, border, equipped ? 0.95 : 0.75);
+    bg.strokeRoundedRect(bounds.x, bounds.y, bounds.width, bounds.height, 8);
+  }
+
   // Draw the end-state overlay: full dim + centered card + restart button + summary
   private drawEndOverlay(): void {
     // Full-screen dim
@@ -531,6 +637,9 @@ class GameScene extends Phaser.Scene {
     this.upgradeFireText.setVisible(false);
     this.upgradeLivesText.setVisible(false);
     this.coinsText.setVisible(false);
+    this.techText.setVisible(false);
+    for (const bg of this.weaponCardBgs) bg.setVisible(false);
+    for (const text of this.weaponCardTexts) text.setVisible(false);
   }
 
   // Hide the end-state overlay (dim + card + restart button)
@@ -548,6 +657,7 @@ class GameScene extends Phaser.Scene {
     this.livesText.setVisible(true);
     this.cannonAngleText.setVisible(true);
     this.powerupStatusText.setVisible(true);
+    this.weaponText.setVisible(true);
     this.touchHintText.setVisible(true);
   }
 
@@ -617,10 +727,11 @@ class GameScene extends Phaser.Scene {
     if (this.cannon) {
       this.cannon.fireCooldown -= dt;
       if (this.cannon.fireCooldown <= 0) {
-        this.spawnBlueMob();
+        this.spawnWeaponProjectiles();
         const baseInterval = effectiveFireInterval(this.upgradeState);
+        const weaponIntervalMult = WEAPON_CONFIG[this.weaponSession.equippedWeapon].fireIntervalMultiplier;
         const rapidMult = this.rapidTimer > 0 ? RAPID_FIRE_MULT : 1;
-        this.cannon.fireCooldown = baseInterval / rapidMult;
+        this.cannon.fireCooldown = (baseInterval * weaponIntervalMult) / rapidMult;
       }
     }
 
@@ -805,6 +916,9 @@ class GameScene extends Phaser.Scene {
       hp: 1,
       vx: Math.cos(finalAngle) * speed,
       vy: Math.sin(finalAngle) * speed,
+      weaponKind: source.weaponKind,
+      damage: source.damage,
+      pierceRemaining: source.pierceRemaining,
     };
   }
 
@@ -882,6 +996,24 @@ class GameScene extends Phaser.Scene {
     this.updateHud();
   }
 
+  private returnToMenu(): void {
+    this.mode = "menu";
+    this.clearMobs();
+    this.clearGates();
+    this.clearBaseAndBarriers();
+    this.clearPowerups();
+    if (this.cannon) {
+      this.cannon.body.destroy();
+      this.cannon = null;
+    }
+    this.isDragging = false;
+    this.keyLeft = false;
+    this.keyRight = false;
+    this.hideEndOverlay();
+    this.updateHud();
+    this.renderMenuState();
+  }
+
   private endGame(): void {
     this.mode = "gameover";
     // Finalize best
@@ -939,7 +1071,7 @@ class GameScene extends Phaser.Scene {
     this.bestScoreText.setFontSize("13px");
     this.bestScoreText.setColor("#f0c840");
 
-    this.promptText.setText("PLAY AGAIN").setVisible(true);
+    this.promptText.setText("ARSENAL").setVisible(true);
     this.promptText.setFontSize("24px");
     this.promptText.y = GameScene.END_RESTART_PROMPT_Y;
     this.overlayDim.setVisible(true);
@@ -961,7 +1093,7 @@ class GameScene extends Phaser.Scene {
     this.upgradeLivesText.setVisible(false);
     this.upgradeFireBg.setVisible(false);
     this.upgradeLivesBg.setVisible(false);
-    this.promptText.setText("PLAY AGAIN").setVisible(true);
+    this.promptText.setText("ARSENAL").setVisible(true);
     this.promptText.setFontSize("24px");
     this.promptText.y = GameScene.END_RESTART_PROMPT_Y;
     this.overlayDim.setVisible(true);
@@ -972,13 +1104,22 @@ class GameScene extends Phaser.Scene {
   }
 
   private handleAction(): void {
-    if (this.mode !== "playing") {
+    if (this.mode === "menu") {
       this.resetGame();
+      return;
+    }
+    if (this.mode === "gameover" || this.mode === "victory") {
+      this.returnToMenu();
     }
   }
 
   private handlePointer(pointer: Phaser.Input.Pointer): void {
     if (this.mode === "menu") {
+      const weaponKind = this.resolveWeaponPointer(pointer.x, pointer.y);
+      if (weaponKind) {
+        this.handleWeaponCardAction(weaponKind);
+        return;
+      }
       const result = resolveMenuPointer(pointer.x, pointer.y, MENU_UPGRADE_BOUNDS);
       if (result === "fire" || result === "lives") {
         this.handleUpgradeKey(result);
@@ -988,9 +1129,23 @@ class GameScene extends Phaser.Scene {
       this.resetGame();
       return;
     }
+    if (this.mode === "gameover" || this.mode === "victory") {
+      this.returnToMenu();
+      return;
+    }
     // In playing mode: start dragging and move cannon to pointer X
     this.isDragging = true;
     this.moveCannonToX(pointer.x);
+  }
+
+  private resolveWeaponPointer(x: number, y: number): WeaponKind | null {
+    for (let i = 0; i < WEAPON_KINDS.length; i += 1) {
+      const bounds = this.getWeaponCardBounds(i);
+      if (x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height) {
+        return WEAPON_KINDS[i];
+      }
+    }
+    return null;
   }
 
   private updateAim(_pointerX: number, _pointerY: number): void {
@@ -1003,23 +1158,47 @@ class GameScene extends Phaser.Scene {
     this.cannonTargetX = clampCannonX(targetX);
   }
 
-  private spawnBlueMob(): void {
+  private getWeaponLevel(kind: WeaponKind): number {
+    return Math.max(1, this.weaponSession.weapons[kind].level);
+  }
+
+  private spawnWeaponProjectiles(): void {
+    const kind = this.weaponSession.equippedWeapon;
+    const cfg = WEAPON_CONFIG[kind];
+    if (kind === "spread") {
+      this.spawnBlueMob(kind, -cfg.spreadVx, -9);
+      this.spawnBlueMob(kind, 0, 0);
+      this.spawnBlueMob(kind, cfg.spreadVx, 9);
+      return;
+    }
+    this.spawnBlueMob(kind, 0, 0);
+  }
+
+  private spawnBlueMob(weaponKind: WeaponKind, vxOffset: number, xOffset: number): void {
     if (this.blueMobs.length >= MOB_TUNING.maxBlueMobs) return;
     if (!this.cannon) return;
+    const weaponCfg = WEAPON_CONFIG[weaponKind];
+    const level = this.getWeaponLevel(weaponKind);
     const angle = this.cannonAngle;
     const cx = this.cannon.body.x;
     const cy = this.cannon.body.y;
-    const muzzleX = cx + Math.cos(angle) * CANNON_MUZZLE_OFFSET;
+    const muzzleX = cx + Math.cos(angle) * CANNON_MUZZLE_OFFSET + xOffset;
     const muzzleY = cy + Math.sin(angle) * CANNON_MUZZLE_OFFSET;
     const body = createMob(this, "blue", muzzleX, muzzleY);
     body.setDepth(30);
+    if (weaponKind === "rail") {
+      body.setScale(0.86, 1.18);
+    }
     const mob: Mob = {
       id: this.nextMobId++,
       team: "blue",
       body,
       hp: 1,
-      vx: Math.cos(angle) * MOB_TUNING.blueSpeed,
-      vy: Math.sin(angle) * MOB_TUNING.blueSpeed,
+      vx: Math.cos(angle) * MOB_TUNING.blueSpeed * weaponCfg.speedMultiplier + vxOffset,
+      vy: Math.sin(angle) * MOB_TUNING.blueSpeed * weaponCfg.speedMultiplier,
+      weaponKind,
+      damage: weaponCfg.damageByLevel[level - 1],
+      pierceRemaining: weaponCfg.pierceByLevel[level - 1],
     };
     this.blueMobs.push(mob);
   }
@@ -1030,7 +1209,9 @@ class GameScene extends Phaser.Scene {
     const laneXs = [141, 191, 242, 293, 344, 395];
     const x = laneXs[Phaser.Math.Between(0, laneXs.length - 1)];
     const y = -30;
-    const body = createMob(this, "red", x, y);
+    const enemyKinds: EnemyKind[] = ["grunt", "runner", "brute", "shielded", "bomber"];
+    const enemyKind = enemyKinds[Phaser.Math.Between(0, enemyKinds.length - 1)];
+    const body = createMob(this, "red", x, y, enemyKind);
     body.setDepth(28);
     // Move toward current cannon position (slight downward + lateral)
     const cannonX = this.cannon ? this.cannon.body.x : CANNON_X;
@@ -1042,6 +1223,8 @@ class GameScene extends Phaser.Scene {
       hp: 1,
       vx: Math.cos(angleToCannon) * speed * 0.15,
       vy: speed,
+      enemyKind,
+      attackKind: "contact",
     };
     this.redMobs.push(mob);
   }
@@ -1067,11 +1250,21 @@ class GameScene extends Phaser.Scene {
         if (!red.body.active) continue;
         const dist = Phaser.Math.Distance.Between(blue.body.x, blue.body.y, red.body.x, red.body.y);
         if (dist < MOB_TUNING.collisionRadius) {
-          blue.body.setActive(false).setVisible(false);
-          red.body.setActive(false).setVisible(false);
-          this.kills += 1;
-          this.coins += COIN_PER_KILL;
-          showFloatingText(this, red.body.x, red.body.y, `+${COIN_PER_KILL}`, "#ffd700", 15);
+          red.hp -= blue.damage ?? 1;
+          const bluePierces = blue.weaponKind === "rail" && (blue.pierceRemaining ?? 0) > 0;
+          if (bluePierces) {
+            blue.pierceRemaining = (blue.pierceRemaining ?? 0) - 1;
+          } else {
+            blue.body.setActive(false).setVisible(false);
+          }
+          if (red.hp <= 0) {
+            red.body.setActive(false).setVisible(false);
+            this.kills += 1;
+            this.coins += COIN_PER_KILL;
+            this.weaponSession.sessionTech += SESSION_TECH_PER_KILL;
+            showFloatingText(this, red.body.x, red.body.y, `+${COIN_PER_KILL}  +${SESSION_TECH_PER_KILL}T`, "#ffd700", 15);
+          }
+          if (!blue.body.active) break;
         }
       }
     }
@@ -1118,7 +1311,7 @@ class GameScene extends Phaser.Scene {
         const inBoundsY = Math.abs(mob.body.y - barrier.y) <= barrier.height / 2;
         if (inBoundsX && inBoundsY) {
           mob.body.setActive(false).setVisible(false);
-          barrier.hp -= 1;
+          barrier.hp -= mob.damage ?? 1;
           updateBarrierVisual(barrier.body, barrier.hp, barrier.maxHp);
           if (barrier.hp <= 0) {
             barrier.body.destroy();
@@ -1142,7 +1335,7 @@ class GameScene extends Phaser.Scene {
       const distX = Math.abs(mob.body.x - base.x);
       if (distY >= -52 && distY <= 34 && distX < 150) {
         mob.body.setActive(false).setVisible(false);
-        base.hp -= ENEMY_BASE_CONFIG.hitDamagePerMob;
+        base.hp -= (mob.damage ?? ENEMY_BASE_CONFIG.hitDamagePerMob);
         updateEnemyBaseVisual(base.body, base.hp, base.maxHp);
         if (this.feedbackCooldown <= 0) {
           showFloatingText(this, mob.body.x, mob.body.y - 20, "-1", "#ff6666");
@@ -1151,8 +1344,9 @@ class GameScene extends Phaser.Scene {
         if (base.hp <= 0) {
           this.checkpointsDestroyed += 1;
           this.coins += COIN_PER_CHECKPOINT;
+          this.weaponSession.sessionTech += SESSION_TECH_PER_CHECKPOINT;
           // Show checkpoint reward below HUD/base area (y=185, depth 200) to avoid obscuring top HUD
-          const rewardText = this.add.text(GAME_WIDTH / 2, 188, `CHECKPOINT +${COIN_PER_CHECKPOINT}`, {
+          const rewardText = this.add.text(GAME_WIDTH / 2, 188, `CHECKPOINT +${COIN_PER_CHECKPOINT}  +${SESSION_TECH_PER_CHECKPOINT}T`, {
             fontFamily: "Arial",
             fontSize: "22px",
             color: "#ffcc00",
@@ -1275,8 +1469,12 @@ class GameScene extends Phaser.Scene {
           baseHp: this.enemyBase ? { hp: this.enemyBase.hp, maxHp: this.enemyBase.maxHp } : null,
         }
       );
+      this.weaponText
+        .setText(formatWeaponHudLine(this.weaponSession.equippedWeapon, this.getWeaponLevel(this.weaponSession.equippedWeapon)))
+        .setVisible(true);
       return;
     }
+    this.weaponText.setText("").setVisible(false);
     clearPlayingHud({
       hudLeftText: this.hudLeftText,
       hudCenterText: this.hudCenterText,
@@ -1296,6 +1494,7 @@ class GameScene extends Phaser.Scene {
       this.drawMenuPromptButton();
       this.drawUpgradeButtonBg("fire");
       this.drawUpgradeButtonBg("lives");
+      this.updateWeaponShopUi();
       this.menuPanel.setVisible(true);
       this.upgradeFireBg.setVisible(true);
       this.upgradeLivesBg.setVisible(true);
@@ -1331,6 +1530,58 @@ class GameScene extends Phaser.Scene {
       this.touchHintText.setVisible(false);
       this.startPromptPulse();
     }
+  }
+
+  private updateWeaponShopUi(): void {
+    this.techText.setText(formatTechLine(this.weaponSession.sessionTech)).setVisible(true);
+    WEAPON_KINDS.forEach((kind, index) => {
+      this.drawWeaponCardBg(kind, index);
+      this.weaponCardBgs[index].setVisible(true);
+      this.weaponCardTexts[index].setText(formatWeaponShopLine(kind, this.getWeaponSessionSnapshot())).setVisible(true);
+    });
+  }
+
+  private getWeaponSessionSnapshot(): WeaponSessionState {
+    return {
+      equippedWeapon: this.weaponSession.equippedWeapon,
+      sessionTech: this.weaponSession.sessionTech,
+      weapons: {
+        laser: { ...this.weaponSession.weapons.laser },
+        spread: { ...this.weaponSession.weapons.spread },
+        rail: { ...this.weaponSession.weapons.rail },
+      },
+    };
+  }
+
+  private handleWeaponCardAction(kind: WeaponKind): void {
+    const state = this.weaponSession.weapons[kind];
+    if (!state.unlocked) {
+      this.tryUpgradeWeapon(kind);
+    } else if (this.weaponSession.equippedWeapon !== kind) {
+      this.weaponSession.equippedWeapon = kind;
+    } else {
+      this.tryUpgradeWeapon(kind);
+    }
+    this.updateWeaponShopUi();
+  }
+
+  private tryUpgradeWeapon(kind: WeaponKind): boolean {
+    const state = this.weaponSession.weapons[kind];
+    const cfg = WEAPON_CONFIG[kind];
+    if (!state.unlocked) {
+      if (this.weaponSession.sessionTech < cfg.unlockCost) return false;
+      this.weaponSession.sessionTech -= cfg.unlockCost;
+      state.unlocked = true;
+      state.level = 1;
+      this.weaponSession.equippedWeapon = kind;
+      return true;
+    }
+    if (state.level >= WEAPON_MAX_LEVEL) return false;
+    const cost = cfg.upgradeCosts[state.level - 1];
+    if (this.weaponSession.sessionTech < cost) return false;
+    this.weaponSession.sessionTech -= cost;
+    state.level += 1;
+    return true;
   }
 
   private toggleFullscreen(): void {
@@ -1427,6 +1678,8 @@ class GameScene extends Phaser.Scene {
       render_game_to_text: () => string;
       advanceTime: (ms: number) => void;
       debug_shop_action: (type: "fire" | "lives") => import("./game/debugHooks").ShopResult | null;
+      debug_weapon_shop_action: (weapon: WeaponKind, action: import("./game/debugHooks").WeaponShopAction) => import("./game/debugHooks").WeaponShopResult | null;
+      debug_grant_session_tech: (amount: number) => WeaponSessionState;
       debug_move_cannon_to_x: (x: number, ms: number) => void;
       debug_force_gameover: () => string;
     };
@@ -1453,6 +1706,7 @@ class GameScene extends Phaser.Scene {
         coins: this.coins,
         totalCoins: this.mode === "menu" ? loadTotalCoins() : this.totalCoins,
         upgrades: this.mode === "menu" ? loadUpgradeState() : this.upgradeState,
+        weapons: this.getWeaponSessionSnapshot(),
         powerups: serializePowerups(
           this.powerups.map((p) => ({ id: p.id, kind: p.kind, x: p.x, y: p.y })),
           this.shieldTimer,
@@ -1479,6 +1733,27 @@ class GameScene extends Phaser.Scene {
         upgrades: this.upgradeState,
         mode: this.mode,
       };
+    };
+    win.debug_weapon_shop_action = (weapon: WeaponKind, action: import("./game/debugHooks").WeaponShopAction) => {
+      if (this.mode !== "menu") return null;
+      if (!WEAPON_KINDS.includes(weapon)) return null;
+      if (action === "equip") {
+        if (this.weaponSession.weapons[weapon].unlocked) {
+          this.weaponSession.equippedWeapon = weapon;
+        }
+      } else {
+        this.tryUpgradeWeapon(weapon);
+      }
+      this.updateWeaponShopUi();
+      return {
+        mode: this.mode,
+        weapons: this.getWeaponSessionSnapshot(),
+      };
+    };
+    win.debug_grant_session_tech = (amount: number) => {
+      this.weaponSession.sessionTech = Math.max(0, this.weaponSession.sessionTech + Math.floor(amount));
+      if (this.mode === "menu") this.updateWeaponShopUi();
+      return this.getWeaponSessionSnapshot();
     };
     win.debug_move_cannon_to_x = (x: number, ms: number) => {
       this.moveCannonToX(x);

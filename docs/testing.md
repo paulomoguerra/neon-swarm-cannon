@@ -17,7 +17,10 @@ npm run smoke
 Runs automated Playwright smoke tests against a local Vite dev server (port 5173). Verifies:
 
 - Browser title is "Neon Swarm Cannon"
-- Debug hooks `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x`, `debug_force_gameover` are present
+- Debug hooks `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_weapon_shop_action`, `debug_grant_session_tech`, `debug_move_cannon_to_x`, `debug_force_gameover` are present
+- Default session weapon state is `Laser Bolt` equipped, Tech 0, Spread/Rail locked
+- Session Arsenal helpers unlock/equip/upgrade Spread Pulse and Rail Lance
+- Session Tech accrues during deterministic play (+1 per red drone kill, +10 per checkpoint)
 - Shop upgrades correctly deduct coins and increment upgrade levels
 - Shop purchase with insufficient coins is a no-op (coins/levels unchanged); exact-coin purchase succeeds; zero-coin purchase fails safely (idempotent)
 - Shop purchase at max upgrade level is a no-op (coins and levels unchanged)
@@ -25,7 +28,7 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 - Cannon forward-only invariant is maintained (angle = -90 degrees, horizontal movement works)
 - Cannon movement via `debug_move_cannon_to_x` hook works correctly
 - Game over state is stable (no crash, canvas present, hooks respond)
-- Deterministic gameover/restart via `debug_force_gameover` hook
+- Deterministic gameover flow via `debug_force_gameover`: gameover CTA returns to menu/shop before next run
 
 **Mobile viewport (3 tests, 393x852 — iPhone 14 Pro):**
 
@@ -35,13 +38,15 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 
 ## Debug Hooks
 
-The game exposes five test hooks on `window`:
+The game exposes seven test hooks on `window`:
 
 | Hook | Signature | Purpose |
 |---|---|---|
 | `render_game_to_text` | `() => string` | Returns a JSON snapshot of current game state |
 | `advanceTime` | `(ms: number) => void` | Advances simulation deterministically by `ms` milliseconds |
 | `debug_shop_action` | `(type: "fire" \| "lives") => ShopResult \| null` | Buys an upgrade from the menu and returns the result |
+| `debug_weapon_shop_action` | `(weapon: "laser" \| "spread" \| "rail", action: "equip" \| "upgrade") => WeaponShopResult \| null` | Equips, unlocks, or upgrades session weapons from the menu |
+| `debug_grant_session_tech` | `(amount: number) => WeaponSessionState` | Adds in-memory Tech for deterministic shop tests |
 | `debug_move_cannon_to_x` | `(x: number, ms: number) => void` | Sets cannon target X and advances simulation by `ms` ms; verifies smooth touch/drag movement invariant |
 | `debug_force_gameover` | `() => string` | Forces gameover state deterministically (starts a run if in menu); returns snapshot after transition |
 
@@ -71,7 +76,7 @@ These hooks exist to support automated testing. **Do not remove them.** When cha
 | `game/art.ts` | Phaser object factory functions |
 | `game/world.ts` | Background rendering |
 | `game/effects.ts` | Floating text, ring pulse effects |
-| `game/debugHooks.ts` | Debug hook type declarations (`render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x`, `debug_force_gameover`) |
+| `game/debugHooks.ts` | Debug hook type declarations (`render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_weapon_shop_action`, `debug_grant_session_tech`, `debug_move_cannon_to_x`, `debug_force_gameover`) |
 | `game/config.ts` | All tuning constants |
 | `game/types.ts` | Shared TypeScript types |
 
@@ -85,7 +90,7 @@ These hooks exist to support automated testing. **Do not remove them.** When cha
 Desktop:
 - **Arrow Left / A**: Move cannon left
 - **Arrow Right / D**: Move cannon right
-- **Space / Enter**: Start run / restart
+- **Space / Enter**: Start run from menu; gameover/victory returns to menu/shop first
 - **F**: Toggle fullscreen
 - **1**: Buy Fire Rate upgrade (menu shortcut)
 - **2**: Buy Lives upgrade (menu shortcut)

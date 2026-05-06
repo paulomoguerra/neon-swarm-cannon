@@ -9,7 +9,7 @@
  * `stringifyGameDebugSnapshot` which calls JSON.stringify for convenience.
  */
 
-import type { UpgradeState } from "./types";
+import type { UpgradeState, WeaponSessionState } from "./types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,6 +33,7 @@ export interface GameDebugSnapshot {
   coins: number;
   totalCoins: number;
   upgrades: UpgradeState;
+  weapons: WeaponSessionState;
   powerups: {
     shieldTimer: number;
     rapidTimer: number;

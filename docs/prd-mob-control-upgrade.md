@@ -6,22 +6,22 @@ Neon Swarm Cannon e um jogo arcade 2.5D de sobrevivencia endless inspirado no co
 
 O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de nenhum titulo existente. O objetivo e recriar a mecanica e a sensacao geral com arte original em Phaser 3 + TypeScript + Vite.
 
-**Estado atual (UX + visual pass - Option B cannon/projectiles):** o MVP tecnico esta implementado, funcional e verificado por smoke tests automaticos. O produto e jogavel, com foco atual em proporcao correta no browser, legibilidade mobile/desktop, hierarquia de HUD, clareza da loja, overlays de fim de partida, canhao sprite Option B e projeteis de energia cyan. A arquitetura de `main.ts` ainda precisa de refatoracao incremental em fases futuras.
+**Estado atual (Combat V2 - session arsenal):** o MVP tecnico esta implementado, funcional e verificado por smoke tests automaticos. O produto e jogavel, com foco atual em proporcao correta no browser, legibilidade mobile/desktop, hierarquia de HUD, clareza da loja, overlays de fim de partida, canhao sprite Option B, projeteis de energia cyan, inimigos corrompidos e sistema session-only de armas/Tech. A arquitetura de `main.ts` ainda precisa de refatoracao incremental em fases futuras.
 
 ---
 
 ## 2. Core Loop Atual
 
-1. Jogador abre o jogo — menu exibe melhor score, melhor distancia, total de moedas, e upgrades comprados.
+1. Jogador abre o jogo — menu exibe melhor score, melhor distancia, total de moedas, upgrades comprados e Session Arsenal com Tech.
 2. Jogador inicia a partida (Space/Enter ou tap).
-3. Canhao na parte inferior central dispara mobs azuis automaticamente, disparando sempre para cima (angulo fixo em -90 graus).
+3. Canhao na parte inferior central dispara a arma equipada automaticamente, sempre para cima (angulo fixo em -90 graus).
 4. Mobs azuis sobem e atravessam gates multiplicadores (x2, x3, +10).
 5. A horda azul cresce.
 6. Mobs azuis colidem com mobs vermelhos (que descem da base inimiga), barreiras e base inimiga.
 7. Destruir a base inimiga atua como checkpoint: concede moedas, incrementa `checkpointsDestroyed`, recria base/barreiras com HP escalado e continua o jogo sem fim.
 8. Se um mob vermelho alcana a zona de perigo do canhao, o jogador perde uma vida. Com zero vidas, game over.
 9. Score, distancia, wave, checkpoints, kills e moedas sao rastreados durante a run.
-10. Em game over, o jogador pode comprar upgrades (Fire Rate, Lives) no menu, que persistem em localStorage, e reiniciar.
+10. Em game over, o CTA volta para o menu/loja. O jogador pode gastar Tech session-only, trocar arma, comprar upgrades persistentes (Fire Rate, Lives) e iniciar a proxima run.
 
 ---
 
@@ -30,7 +30,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 ### Desktop
 | Tecla | Acao |
 |---|---|
-| Space / Enter | Iniciar run / Reiniciar (quando em menu ou gameover) |
+| Space / Enter | Iniciar run no menu; em gameover/victory volta ao menu/Session Arsenal |
 | ArrowLeft / A | Mover canhao para a esquerda |
 | ArrowRight / D | Mover canhao para a direita |
 | F | Toggle fullscreen |
@@ -40,7 +40,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 ### Mobile
 | Gesto | Acao |
 |---|---|
-| Tap | Iniciar run / Reiniciar |
+| Tap | Iniciar run, interagir com lojas, ou voltar ao menu apos gameover |
 | Drag horizontal | Mover canhao para a esquerda ou direita |
 
 **Invariante verificado:** o angulo do canhao e sempre -90 graus (vertical para cima). Nao ha mira diagonal ou livre.
@@ -52,21 +52,31 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 ### 4.1 Canon e Disparo
 - Canhao fixo na parte inferior-central (`CANNON_X = 480`, `CANNON_Y = 470`).
 - Direcao visual escolhida: "Option B", implementada como sprite raster em `public/assets/cannon-hover-option-b.png`: torre hover futurista compacta, com armadura graphite/cobalt, nucleo cyan brilhante, fins laterais e canhao curto apontando para cima.
-- Disparo automatico com intervalo base de 0.28s, redutivel por upgrades de Fire Rate.
+- Disparo automatico com intervalo base de 0.28s, redutivel por upgrades de Fire Rate e multiplicado pelo perfil da arma equipada.
 - Angulo fixo em -90 graus — sem mira livre.
 - Movimento horizontal via teclado (ArrowLeft/Right, A/D) ou drag de pointer.
 - Limites horizontais: `CANNON_MIN_X = 240`, `CANNON_MAX_X = 720`.
+
+### 4.1.1 Session Arsenal e Armas
+- Armas sao session-only: estado reseta no refresh e nao usa `localStorage`.
+- `Tech` e moeda in-memory separada de Coins. Recompensas: +1 Tech por drone vermelho destruido, +10 Tech por checkpoint/base destruida.
+- Uma arma equipada por vez:
+  - `Laser Bolt`: tiro cyan reto, default desbloqueado.
+  - `Spread Pulse`: 3 tiros cyan com espalhamento horizontal leve, fire rate mais lento.
+  - `Rail Lance`: disparo de energia perfurante, fire rate mais lento, pode atingir multiplos drones.
+- Session state exposto: `equippedWeapon`, `sessionTech`, level por arma, unlock de Spread/Rail.
+- O menu mostra uma loja compacta `Session Arsenal` com Tech e tres cards de armas. Tap/click em card desbloqueado equipa; card equipado tenta upgrade; card bloqueado tenta unlock quando ha Tech suficiente.
 
 ### 4.2 Mobs Azuis
 - Spawnados pelo canhao em intervalos regulares.
 - Renderizados como projeteis de energia cyan com nucleo brilhante e trail curto, para combinar com a torre hover Option B.
 - Subem verticalmente a velocidade `blueSpeed = 280 px/s`.
-- Ao colidir com mob vermelho ou barreira, ambos morrem.
+- Ao colidir com mob vermelho ou barreira, aplica `damage` da arma. Laser/Spread sao consumidos em hit de inimigo; Rail continua enquanto tiver `pierceRemaining`.
 - Ao colidir com base inimiga, base perde HP e o mob morre.
 
 ### 4.3 Mobs Vermelhos
 - Spawnados pela base inimiga em intervalos (`redSpawnInterval` comeca em 2.2s, decai por wave ate 0.75s minimo).
-- Renderizados como familia visual de drones corrompidos em `public/assets/enemy-*.png`: Grunt, Runner, Brute, Shielded e Bomber. No estado atual, as variantes sao cosmeticas e usam o mesmo comportamento/HP dos mobs vermelhos existentes; roles mecanicas ficam para uma fase futura de balanceamento.
+- Renderizados como familia visual de drones corrompidos em `public/assets/enemy-*.png`: Grunt, Runner, Brute, Shielded e Bomber. No estado atual, as variantes sao cosmeticas e usam o mesmo comportamento/HP dos mobs vermelhos existentes; cada mob ja carrega metadados futuros `enemyKind`, `hp` e `attackKind`.
 - Velocidade comeca em 60 px/s e aumenta 5 px/s por wave, ate +55 bonus.
 - Descendem em direcao ao canhao.
 
@@ -111,10 +121,11 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 - Persistente via localStorage (`mobCannon_totalCoins`, `mobCannon_upgrades`). As chaves mantem o prefixo historico `mobCannon` para preservar progresso local existente.
 - Upgrades: Fire Rate (3 niveis, custos [60, 140, 280], reduz intervalo de disparo) e Lives (3 niveis, custos [40, 100, 200], +1 vida inicial por nivel).
 - Melhores score e distancia tambem persistidos.
+- Armas e Tech nao sao persistidos nesta fase.
 
 ### 4.11 UI / HUD
-- Menu principal: best score, best distance, coins, upgrades com estado de compra claro (`Buy for`, `Need`, `MAX`) e CTA de start em zona confortavel para toque.
-- Durante gameplay: HUD compacto dentro de uma safe area central e canvas escalado com `FIT` para evitar corte/distorcao em mobile e desktop.
+- Menu principal: best score, best distance, coins, upgrades persistentes com estado de compra claro (`Buy for`, `Need`, `MAX`), Session Arsenal com Tech/estado de armas e CTA de start em zona confortavel para toque.
+- Durante gameplay: HUD compacto dentro de uma safe area central, label da arma equipada e canvas escalado com `FIT` para evitar corte/distorcao em mobile e desktop.
 - Informacao critica persistente: score/distancia, wave/checkpoints, red/base HP e vidas.
 - Status de powerups aparece como linha compacta contextual, sem disputar o centro do campo.
 - Feedback de checkpoint e recompensas deve ser legivel, mas nao bloquear a leitura da base, gates e hordas.
@@ -138,26 +149,30 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 | `render_game_to_text` | `() => string` | Snapshot JSON do estado atual do jogo |
 | `advanceTime` | `(ms: number) => void` | Avanca a simulacao em `ms` milissegundos |
 | `debug_shop_action` | `(type: "fire" \| "lives") => ShopResult \| null` | Compra upgrade a partir do menu |
+| `debug_weapon_shop_action` | `(weapon: "laser" \| "spread" \| "rail", action: "equip" \| "upgrade") => WeaponShopResult \| null` | Equipa/desbloqueia/evolui armas session-only no menu |
+| `debug_grant_session_tech` | `(amount: number) => WeaponSessionState` | Adiciona Tech em memoria para testes determiniscos |
 | `debug_move_cannon_to_x` | `(x: number, ms: number) => void` | Move o canhao para X e avanca tempo — para verificar invariante de angulo |
 | `debug_force_gameover` | `() => string` | Forca estado de game over de forma deterministica e retorna snapshot |
 
 ### Smoke Tests (`npm run smoke`)
 
-Executa 13 testes contra Vite dev server via Playwright:
+Executa 15 testes contra Vite dev server via Playwright:
 
 1. **Page title** — title e "Neon Swarm Cannon"
-2. **Debug hooks exist** — `render_game_to_text`, `advanceTime`, `debug_shop_action`, `debug_move_cannon_to_x`, `debug_force_gameover` presentes
-3. **Shop upgrade fire** — compra upgrade de fire com localStorage seed, verifica deducao de moedas
-4. **Shop upgrade lives** — compra upgrade de lives
-5. **Shop insufficient coins / idempotency** — compra sem moedas suficientes nao altera estado; compra com moedas exatas funciona
-6. **Max upgrade idempotency** — upgrades no nivel maximo nao gastam moedas nem ultrapassam cap
-7. **Start run + time advance** — inicia run com Space, avanca 45s, verifica estado valido
-8. **Forward-only invariant + keyboard movement** — cannon angle = -90, ArrowLeft/Right move sem alterar angulo
-9. **debug_move_cannon_to_x** — move canhao horizontalmente com o hook
-10. **debug_force_gameover** — forca gameover, valida snapshot e restart
-11. **Mobile canvas visible** — viewport 393x852 renderiza canvas portrait com `FIT`, sem crop
-12. **Mobile tap starts run** — tap no canvas inicia a run
-13. **Mobile drag moves cannon** — drag horizontal move o canhao e preserva angulo -90
+2. **Debug hooks exist** — `render_game_to_text`, `advanceTime`, shop hooks, weapon hooks, movement/gameover hooks presentes
+3. **Default weapon state** — `Laser Bolt` equipado, Tech 0, Spread/Rail bloqueadas
+4. **Shop upgrade fire** — compra upgrade de fire com localStorage seed, verifica deducao de moedas
+5. **Shop upgrade lives** — compra upgrade de lives
+6. **Shop insufficient coins / idempotency** — compra sem moedas suficientes nao altera estado; compra com moedas exatas funciona
+7. **Max upgrade idempotency** — upgrades no nivel maximo nao gastam moedas nem ultrapassam cap
+8. **Session Arsenal helpers** — desbloqueia/equipa/evolui Spread Pulse e Rail Lance via debug helper
+9. **Start run + time advance** — inicia run com Space, avanca 45s, verifica estado valido e Tech acumulado
+10. **Forward-only invariant + keyboard movement** — cannon angle = -90, ArrowLeft/Right move sem alterar angulo
+11. **debug_move_cannon_to_x** — move canhao horizontalmente com o hook
+12. **debug_force_gameover** — forca gameover, valida retorno gameover -> menu/shop -> playing
+13. **Mobile canvas visible** — viewport 393x852 renderiza canvas portrait com `FIT`, sem crop
+14. **Mobile tap starts run** — tap no canvas inicia a run
+15. **Mobile drag moves cannon** — drag horizontal move o canhao e preserva angulo -90
 
 ### Limites dos Smoke Tests Actuais
 

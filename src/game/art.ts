@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import type { PickupKind, PowerupKind, Team } from "./types";
+import type { EnemyKind, PickupKind, PowerupKind, Team } from "./types";
 
 const UNIT_COLORS = [0x35a8ff, 0x2acb74, 0xffc747, 0xff7c42, 0xb66cff];
 const UNIT_DARK_COLORS = [0x176fb7, 0x158949, 0xba7f14, 0xb94520, 0x6f31ad];
@@ -39,14 +39,14 @@ const MOB_COLORS: Record<Team, { body: number; outline: number; glow: number }> 
 };
 
 const ENEMY_DRONES = [
-  { key: "enemy-grunt", scale: 0.105 },
-  { key: "enemy-runner", scale: 0.115 },
-  { key: "enemy-brute", scale: 0.11 },
-  { key: "enemy-shielded", scale: 0.12 },
-  { key: "enemy-bomber", scale: 0.15 },
+  { kind: "grunt", key: "enemy-grunt", scale: 0.105 },
+  { kind: "runner", key: "enemy-runner", scale: 0.115 },
+  { kind: "brute", key: "enemy-brute", scale: 0.11 },
+  { kind: "shielded", key: "enemy-shielded", scale: 0.12 },
+  { kind: "bomber", key: "enemy-bomber", scale: 0.15 },
 ] as const;
 
-export function createMob(scene: Phaser.Scene, team: Team, x: number, y: number): Phaser.GameObjects.Container {
+export function createMob(scene: Phaser.Scene, team: Team, x: number, y: number, enemyKind?: EnemyKind): Phaser.GameObjects.Container {
   const container = scene.add.container(x, y);
   const colors = MOB_COLORS[team];
 
@@ -63,9 +63,12 @@ export function createMob(scene: Phaser.Scene, team: Team, x: number, y: number)
     return container;
   }
 
+  const preferredDrone = enemyKind
+    ? ENEMY_DRONES.find((drone) => drone.kind === enemyKind && scene.textures.exists(drone.key))
+    : undefined;
   const availableDrones = ENEMY_DRONES.filter((drone) => scene.textures.exists(drone.key));
   if (availableDrones.length > 0) {
-    const drone = availableDrones[Phaser.Math.Between(0, availableDrones.length - 1)];
+    const drone = preferredDrone ?? availableDrones[Phaser.Math.Between(0, availableDrones.length - 1)];
     const sprite = scene.add.image(0, 0, drone.key);
     sprite.setOrigin(0.5, 0.56);
     sprite.setScale(drone.scale);
