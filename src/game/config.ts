@@ -8,6 +8,13 @@ export const LANE_CENTER = 268;
 export const SQUAD_Y = 711;
 export const MAX_UNITS = 12;
 export const MAX_UNIT_LEVEL = 5;
+export const CAMERA_PROJECTION = {
+  topPerspective: 0.42,
+  bottomPerspective: 1.08,
+  topScale: 0.64,
+  bottomScale: 1.16,
+} as const;
+export const BALANCE_PROFILE = "arcade-60-90s";
 
 // Cannon (bottom-center, Mob Control style) — Y scaled from 540-70=470 to 960*0.872 ≈ 837
 export const CANNON_X = GAME_WIDTH / 2;
@@ -65,9 +72,9 @@ export const SQUAD_FORMATION = [
 // Level 1 gate definitions: { kind, value, x, y, width, height }
 // X scaled by 540/960 = 0.5625; Y scaled by 960/540 ≈ 1.778
 export const LEVEL_1_GATES = [
-  { kind: "multiply" as const, value: 2, x: 180, y: 438, width: 73, height: 54 },
-  { kind: "multiply" as const, value: 3, x: 360, y: 438, width: 73, height: 54 },
-  { kind: "add" as const, value: 10, x: 270, y: 276, width: 79, height: 54 },
+  { kind: "multiply" as const, value: 2, x: 168, y: 470, width: 76, height: 56 },
+  { kind: "multiply" as const, value: 3, x: 372, y: 470, width: 76, height: 56 },
+  { kind: "add" as const, value: 10, x: 270, y: 310, width: 82, height: 56 },
 ];
 
 // Legacy single-base config retained for debug/test compatibility during the
@@ -80,26 +87,26 @@ export const ENEMY_BASE_CONFIG = {
 };
 
 export const REACTOR_CONFIGS = [
-  { id: 0, side: "left" as const, x: 180, y: 112, maxHp: 45 },
-  { id: 1, side: "right" as const, x: 360, y: 112, maxHp: 45 },
+  { id: 0, side: "left" as const, x: 172, y: 104, maxHp: 45 },
+  { id: 1, side: "right" as const, x: 368, y: 104, maxHp: 45 },
 ] as const;
 
 export const REACTOR_HIT_DAMAGE_PER_MOB = 1;
-export const REACTOR_RESET_DELAY = 2.2;
+export const REACTOR_RESET_DELAY = 2.8;
 export const DUAL_BREACH_COIN_BONUS = 10;
 export const DUAL_BREACH_TECH_BONUS = 5;
 
 // Level 1 barriers: blocks between gates and base — Y scaled by 1.778
 export const LEVEL_1_BARRIERS = [
-  { id: 0, x: 270, y: 362, width: 46, height: 58, hp: 16, maxHp: 16 },
-  { id: 1, x: 180, y: 590, width: 58, height: 34, hp: 10, maxHp: 10 },
-  { id: 2, x: 360, y: 590, width: 58, height: 34, hp: 10, maxHp: 10 },
+  { id: 0, x: 270, y: 390, width: 48, height: 64, hp: 16, maxHp: 16 },
+  { id: 1, x: 168, y: 620, width: 62, height: 36, hp: 10, maxHp: 10 },
+  { id: 2, x: 372, y: 620, width: 62, height: 36, hp: 10, maxHp: 10 },
 ];
 
 // Endless run tuning
 export const ENDLESS_TUNING = {
-  baseHpStart: 65,
-  baseHpPerCheckpoint: 25,
+  baseHpStart: 45,
+  baseHpPerCheckpoint: 12,
   barrierHpScalePerWave: 0.12,
   waveDuration: 18,
   scorePerDistance: 1,
@@ -108,13 +115,13 @@ export const ENDLESS_TUNING = {
   baseDistancePerSecond: 35,
   maxDistanceBonus: 90,
   distanceBonusPerSecond: 1.2,
-  redSpawnIntervalStart: 2.2,
-  redSpawnIntervalMin: 0.75,
+  redSpawnIntervalStart: 2.3,
+  redSpawnIntervalMin: 0.85,
   redSpawnIntervalDecay: 0.12,
   redSpeedStart: 60,
   redSpeedMaxBonus: 55,
   redSpeedPerWave: 5,
-  dangerGraceSeconds: 45,
+  dangerGraceSeconds: 35,
 };
 
 // Cannon horizontal movement bounds — X scaled by 540/960 = 0.5625

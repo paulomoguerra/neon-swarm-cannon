@@ -6,7 +6,7 @@ Neon Swarm Cannon e um jogo arcade 2.5D de sobrevivencia endless inspirado no co
 
 O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de nenhum titulo existente. O objetivo e recriar a mecanica e a sensacao geral com arte original em Phaser 3 + TypeScript + Vite.
 
-**Estado atual (Combat V2 - session arsenal):** o MVP tecnico esta implementado, funcional e verificado por smoke tests automaticos. O produto e jogavel, com foco atual em proporcao correta no browser, legibilidade mobile/desktop, hierarquia de HUD, clareza da loja, overlays de fim de partida, canhao sprite Option B, projeteis de energia cyan, inimigos corrompidos e sistema session-only de armas/Tech. A arquitetura de `main.ts` ainda precisa de refatoracao incremental em fases futuras.
+**Estado atual (Map Camera + Balance Revamp):** o MVP tecnico esta implementado, funcional e verificado por smoke tests automaticos. O produto e jogavel, com foco atual em proporcao correta no browser, leitura mobile/desktop, dual corridor map, Reactor Cores, camera 2.5D com perspectiva mais forte, balance profile `arcade-60-90s`, canhao sprite Option B, projeteis de energia cyan, inimigos corrompidos e sistema session-only de armas/Tech. A arquitetura de `main.ts` ainda precisa de refatoracao incremental em fases futuras.
 
 ---
 
@@ -75,7 +75,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 - Ao colidir com Reactor Core, o reactor perde HP e o projetil morre.
 
 ### 4.3 Mobs Vermelhos
-- Spawnados pelos corredores esquerdo/direito em intervalos (`redSpawnInterval` comeca em 2.2s, decai por wave ate 0.75s minimo).
+- Spawnados pelos corredores esquerdo/direito em intervalos (`redSpawnInterval` comeca em 2.3s, decai por wave ate 0.85s minimo).
 - Renderizados como familia visual de drones corrompidos em `public/assets/enemy-*.png`: Grunt, Runner, Brute, Shielded e Bomber. No estado atual, as variantes sao cosmeticas e usam o mesmo comportamento/HP dos mobs vermelhos existentes; cada mob ja carrega metadados futuros `enemyKind`, `hp` e `attackKind`.
 - Velocidade comeca em 60 px/s e aumenta 5 px/s por wave, ate +55 bonus.
 - Descendem em direcao ao canhao.
@@ -104,14 +104,14 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 - Moedas de recompensa: 15 por Reactor Core destruido; dual breach concede bonus adicional.
 - O jogo NAO termina apos o primeiro checkpoint — continua indefinidamente com escalamento progressivo.
 - `wave` incrementa a cada 18 segundos.
-- A cada checkpoint: HP dos reactors aumenta 25, barreiras escalam 12% por wave acumulado.
+- A cada checkpoint: HP dos reactors aumenta 12, barreiras escalam 12% por wave acumulado.
 - Gradiente de dificuldade: intervalos de spawn vermelho diminuem, velocidade dos vermelhos aumenta.
 
 ### 4.8 Lives e Derrota
 - 3 vidas iniciais + bonus por upgrades de Lives.
 - Mob vermelho que alcana `cannonDangerY = 450` com raio 45px remove 1 vida.
 - Com 0 vidas: modo `gameover`.
-- Sistema de `dangerGraceSeconds` (45s) concede invulnerabilidade inicial.
+- Sistema de `dangerGraceSeconds` (35s) concede invulnerabilidade inicial.
 
 ### 4.9 Powerups
 - Spawnados periodicamente (intervalo de 14s) caindo de cima.
@@ -132,6 +132,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 - Status de powerups aparece como linha compacta contextual, sem disputar o centro do campo.
 - Feedback de checkpoint e recompensas deve ser legivel, mas nao bloquear a leitura dos reactors, gates e hordas.
 - Game over: card central dentro da safe area, resumo em multiplas linhas, best score separado e CTA alinhado com o botao.
+- Camera/projecao: `topPerspective=0.42`, `bottomPerspective=1.08`, scale mais agressivo em Y para reduzir leitura top-down e reforcar profundidade 2.5D.
 
 ### 4.12 Direcao de UX e Design
 - Prioridade 1: preservar o campo de jogo. HUD e overlays nao devem cobrir o centro util durante gameplay normal.
@@ -169,7 +170,7 @@ Executa 16 testes contra Vite dev server via Playwright:
 7. **Max upgrade idempotency** — upgrades no nivel maximo nao gastam moedas nem ultrapassam cap
 8. **Session Arsenal helpers** — desbloqueia/equipa/evolui Spread Pulse e Rail Lance via debug helper
 9. **Start run + time advance** — inicia run com Space, avanca 45s, verifica estado valido e Tech acumulado
-10. **Dual reactor debug state** — snapshot contem dois reactors, checkpoint de reactor e compatibilidade `base` agregada
+10. **Dual reactor debug state** — snapshot contem dois reactors, perfil de camera/balanco, checkpoint de reactor e compatibilidade `base` agregada
 11. **Forward-only invariant + keyboard movement** — cannon angle = -90, ArrowLeft/Right move sem alterar angulo
 12. **debug_move_cannon_to_x** — move canhao horizontalmente com o hook
 13. **debug_force_gameover** — forca gameover, valida retorno gameover -> menu/shop -> playing
@@ -375,9 +376,9 @@ Depois de arquitectura limpa e cobertura de testes:
 | `blueSpeed` | 280 px/s | mobs azuis sobem |
 | `redSpeed` | 60 + 5/wave px/s | mobs vermelhos descem |
 | `fireInterval` | 0.28s base | reducible via upgrades |
-| `redSpawnInterval` | 2.2s -> 0.75s min | decai por wave |
-| `baseHpStart` | 65 | inicial |
-| `baseHpPerCheckpoint` | +25 | escala por checkpoint |
+| `redSpawnInterval` | 2.3s -> 0.85s min | decai por wave |
+| `baseHpStart` | 45 | reactor inicial |
+| `baseHpPerCheckpoint` | +12 | escala por checkpoint |
 | `waveDuration` | 18s | duracao de cada wave |
 | `coinPerKill` | 1 | |
 | `coinPerCheckpoint` | 15 | |

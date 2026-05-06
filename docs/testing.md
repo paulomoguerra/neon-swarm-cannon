@@ -23,6 +23,7 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 - Session Tech accrues during deterministic play (+1 per red drone kill, +10 per checkpoint)
 - Dual-reactor map snapshot exposes two reactors and aggregate legacy base compatibility
 - Reactor checkpoints increment progress and award checkpoint Tech/Coins
+- Camera/balance debug fields expose `topPerspective=0.42`, `bottomPerspective=1.08`, and `arcade-60-90s`
 - Shop upgrades correctly deduct coins and increment upgrade levels
 - Shop purchase with insufficient coins is a no-op (coins/levels unchanged); exact-coin purchase succeeds; zero-coin purchase fails safely (idempotent)
 - Shop purchase at max upgrade level is a no-op (coins and levels unchanged)

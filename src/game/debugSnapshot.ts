@@ -34,6 +34,8 @@ export interface GameDebugSnapshot {
   totalCoins: number;
   upgrades: UpgradeState;
   weapons: WeaponSessionState;
+  cameraProjection?: { topPerspective: number; bottomPerspective: number };
+  balanceProfile?: string;
   powerups: {
     shieldTimer: number;
     rapidTimer: number;

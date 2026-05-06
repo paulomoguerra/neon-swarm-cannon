@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GAME_HEIGHT, GAME_WIDTH, LANES, LANE_CENTER } from "./config";
+import { GAME_HEIGHT, GAME_WIDTH, LANES } from "./config";
 import { projectX } from "./projection";
 
 export function drawWorld(
@@ -37,13 +37,13 @@ export function drawWorld(
     drawProjectedStrip(background, laneX, 16, 918, 16, 0xd8b16d, 0.38);
   }
 
-  // Subtle grass tufts — reduced density by 40% for less visual noise on mobile
-  background.fillStyle(0x3da344, 0.2);
-  for (let y = -76 + (scrollOffset % 76); y < GAME_HEIGHT + 80; y += 136) {
-    for (let x = 232; x < 730; x += 144) {
+  // Subtle side texture kept out of the active corridor read.
+  background.fillStyle(0x3da344, 0.11);
+  for (let y = -90 + (scrollOffset % 120); y < GAME_HEIGHT + 80; y += 180) {
+    for (const x of [104, 436]) {
       const projectedX = projectX(x, y);
-      const width = 44 + (y / GAME_HEIGHT) * 18;
-      background.fillRoundedRect(projectedX - width / 2, y, width, 28, 6);
+      const width = 28 + (y / GAME_HEIGHT) * 12;
+      background.fillRoundedRect(projectedX - width / 2, y, width, 22, 6);
     }
   }
 
@@ -51,19 +51,22 @@ export function drawWorld(
 
   laneGraphics.clear();
   // Lane guidelines — subtle white — scaled for portrait
-  laneGraphics.lineStyle(3, 0xffffff, 0.22);
+  laneGraphics.lineStyle(3, 0xffffff, 0.18);
   for (const laneX of LANES) {
     laneGraphics.strokeLineShape(new Phaser.Geom.Line(projectX(laneX, 12), 12, projectX(laneX, 950), 950));
   }
-  // Board edge — dark green border — portrait-proportioned
-  laneGraphics.lineStyle(5, 0x2d5229, 0.8);
+  // Board edge and corridor rails — stronger taper for lower-camera runway feel.
+  laneGraphics.lineStyle(5, 0x1f3f2c, 0.85);
   laneGraphics.strokePoints([
-    new Phaser.Geom.Point(124, 14),
-    new Phaser.Geom.Point(416, 14),
-    new Phaser.Geom.Point(424, 906),
-    new Phaser.Geom.Point(116, 906),
-    new Phaser.Geom.Point(124, 14),
+    new Phaser.Geom.Point(146, 16),
+    new Phaser.Geom.Point(394, 16),
+    new Phaser.Geom.Point(462, 916),
+    new Phaser.Geom.Point(78, 916),
+    new Phaser.Geom.Point(146, 16),
   ]);
+  laneGraphics.lineStyle(4, 0x12363a, 0.5);
+  laneGraphics.strokeLineShape(new Phaser.Geom.Line(247, 88, 213, 898));
+  laneGraphics.strokeLineShape(new Phaser.Geom.Line(293, 88, 327, 898));
 
   if (showHud) {
     uiGraphics.clear();
@@ -79,58 +82,58 @@ function drawBoardSlab(background: Phaser.GameObjects.Graphics): void {
   // Scaled for portrait canvas
   background.fillStyle(0xcda55f, 1);
   background.fillPoints([
-    new Phaser.Geom.Point(54, 18),
-    new Phaser.Geom.Point(486, 18),
-    new Phaser.Geom.Point(494, 900),
-    new Phaser.Geom.Point(46, 900),
+    new Phaser.Geom.Point(116, 18),
+    new Phaser.Geom.Point(424, 18),
+    new Phaser.Geom.Point(512, 904),
+    new Phaser.Geom.Point(28, 904),
   ], true);
   background.fillStyle(0x7c5d32, 0.32);
   background.fillPoints([
-    new Phaser.Geom.Point(46, 900),
-    new Phaser.Geom.Point(494, 900),
-    new Phaser.Geom.Point(486, 940),
-    new Phaser.Geom.Point(54, 940),
+    new Phaser.Geom.Point(28, 904),
+    new Phaser.Geom.Point(512, 904),
+    new Phaser.Geom.Point(488, 940),
+    new Phaser.Geom.Point(52, 940),
   ], true);
   background.fillStyle(0x6fbf50, 1);
   background.fillPoints([
-    new Phaser.Geom.Point(58, 28),
-    new Phaser.Geom.Point(482, 28),
-    new Phaser.Geom.Point(474, 900),
-    new Phaser.Geom.Point(66, 900),
+    new Phaser.Geom.Point(124, 30),
+    new Phaser.Geom.Point(416, 30),
+    new Phaser.Geom.Point(492, 900),
+    new Phaser.Geom.Point(48, 900),
   ], true);
   background.fillStyle(0x86d666, 1);
   background.fillPoints([
-    new Phaser.Geom.Point(62, 38),
-    new Phaser.Geom.Point(478, 38),
-    new Phaser.Geom.Point(470, 895),
-    new Phaser.Geom.Point(70, 895),
+    new Phaser.Geom.Point(132, 42),
+    new Phaser.Geom.Point(408, 42),
+    new Phaser.Geom.Point(478, 894),
+    new Phaser.Geom.Point(62, 894),
   ], true);
 
   // Two subtle assault corridors with a central energy trench.
   background.fillStyle(0x5bd085, 0.23);
   background.fillPoints([
-    new Phaser.Geom.Point(82, 74),
-    new Phaser.Geom.Point(247, 56),
-    new Phaser.Geom.Point(242, 880),
-    new Phaser.Geom.Point(94, 880),
+    new Phaser.Geom.Point(132, 76),
+    new Phaser.Geom.Point(244, 62),
+    new Phaser.Geom.Point(224, 872),
+    new Phaser.Geom.Point(76, 892),
   ], true);
   background.fillStyle(0x6ba7ff, 0.16);
   background.fillPoints([
-    new Phaser.Geom.Point(293, 56),
-    new Phaser.Geom.Point(458, 74),
-    new Phaser.Geom.Point(446, 880),
-    new Phaser.Geom.Point(298, 880),
+    new Phaser.Geom.Point(296, 62),
+    new Phaser.Geom.Point(408, 76),
+    new Phaser.Geom.Point(464, 892),
+    new Phaser.Geom.Point(316, 872),
   ], true);
   background.fillStyle(0x102b36, 0.42);
   background.fillPoints([
-    new Phaser.Geom.Point(258, 72),
-    new Phaser.Geom.Point(282, 72),
-    new Phaser.Geom.Point(292, 884),
-    new Phaser.Geom.Point(248, 884),
+    new Phaser.Geom.Point(260, 78),
+    new Phaser.Geom.Point(280, 78),
+    new Phaser.Geom.Point(316, 884),
+    new Phaser.Geom.Point(224, 884),
   ], true);
-  background.lineStyle(2, 0x00e5ff, 0.28);
-  background.strokeLineShape(new Phaser.Geom.Line(258, 80, 248, 884));
-  background.strokeLineShape(new Phaser.Geom.Line(282, 80, 292, 884));
+  background.lineStyle(3, 0x00e5ff, 0.3);
+  background.strokeLineShape(new Phaser.Geom.Line(260, 84, 224, 884));
+  background.strokeLineShape(new Phaser.Geom.Line(280, 84, 316, 884));
 }
 
 function drawProjectedStrip(

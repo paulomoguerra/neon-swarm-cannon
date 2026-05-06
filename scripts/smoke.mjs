@@ -361,6 +361,9 @@ async function testReactorDebugState(page) {
   const before = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
   assert(before.reactors.length === 2, `Expected two reactors, got ${before.reactors.length}`);
   assert(before.reactors.every((r) => r.hp > 0 && r.maxHp > 0 && r.destroyed === false), "Reactors should start alive with HP");
+  assert(before.balanceProfile === "arcade-60-90s", `Expected arcade balance profile, got ${before.balanceProfile}`);
+  assert(before.cameraProjection.topPerspective === 0.42, `Expected topPerspective 0.42, got ${before.cameraProjection.topPerspective}`);
+  assert(before.cameraProjection.bottomPerspective === 1.08, `Expected bottomPerspective 1.08, got ${before.cameraProjection.bottomPerspective}`);
 
   await page.evaluate(() => window.advanceTime(45_000));
   await page.waitForTimeout(200);
@@ -370,6 +373,11 @@ async function testReactorDebugState(page) {
   assert(after.base.maxHp >= after.reactors.reduce((sum, r) => sum + r.maxHp, 0), "Base compatibility should aggregate reactor max HP");
   assert(after.checkpointsDestroyed > 0, "Expected at least one reactor checkpoint after 45s deterministic advance");
   assert(after.weapons.sessionTech >= after.checkpointsDestroyed * 10, "Tech should include reactor checkpoint rewards");
+  const maxReactorHp = Math.max(...after.reactors.map((r) => r.maxHp));
+  assert(
+    maxReactorHp <= 45 + after.checkpointsDestroyed * 12,
+    `Reactor HP scaling should use +12/checkpoint, got maxHp=${maxReactorHp}, checkpoints=${after.checkpointsDestroyed}`
+  );
   console.log(`  [PASS] reactor state: checkpoints=${after.checkpointsDestroyed}, reactors=${after.reactors.map((r) => `${r.side}:${r.hp}/${r.maxHp}`).join(", ")}`);
 }
 

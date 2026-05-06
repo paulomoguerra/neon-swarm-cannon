@@ -13,6 +13,8 @@ import {
   REACTOR_RESET_DELAY,
   DUAL_BREACH_COIN_BONUS,
   DUAL_BREACH_TECH_BONUS,
+  CAMERA_PROJECTION,
+  BALANCE_PROFILE,
   MOB_TUNING,
   ENDLESS_TUNING,
   POWERUP_SPAWN_INTERVAL,
@@ -1780,6 +1782,11 @@ class GameScene extends Phaser.Scene {
         totalCoins: this.mode === "menu" ? loadTotalCoins() : this.totalCoins,
         upgrades: this.mode === "menu" ? loadUpgradeState() : this.upgradeState,
         weapons: this.getWeaponSessionSnapshot(),
+        cameraProjection: {
+          topPerspective: CAMERA_PROJECTION.topPerspective,
+          bottomPerspective: CAMERA_PROJECTION.bottomPerspective,
+        },
+        balanceProfile: BALANCE_PROFILE,
         powerups: serializePowerups(
           this.powerups.map((p) => ({ id: p.id, kind: p.kind, x: p.x, y: p.y })),
           this.shieldTimer,
