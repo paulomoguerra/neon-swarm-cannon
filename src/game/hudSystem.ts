@@ -22,6 +22,7 @@ import {
   formatLivesUpgradeLine,
 } from "./uiText";
 import { loadBestScore, loadBestDistance, loadTotalCoins, loadUpgradeState } from "./progression";
+import type { ReactorCore } from "./types";
 
 // ---------------------------------------------------------------------------
 // Playing-state HUD — refs and state interfaces
@@ -45,13 +46,13 @@ export interface PlayingHudState {
   cannonLives: number;
   shieldTimer: number;
   rapidTimer: number;
-  baseHp: { hp: number; maxHp: number } | null;
+  reactors: Array<Pick<ReactorCore, "side" | "hp" | "maxHp" | "destroyed">>;
 }
 
 export function updatePlayingHud(refs: PlayingHudRefs, state: PlayingHudState): void {
   refs.hudLeftText.setText(formatHudLeft(state.score, state.distanceMeters));
   refs.hudCenterText.setText(formatHudCenter(state.wave, state.checkpointsDestroyed));
-  refs.hudRightText.setText(formatHudRight(state.redMobCount, state.baseHp));
+  refs.hudRightText.setText(formatHudRight(state.redMobCount, state.reactors));
   refs.livesText.setText(formatLivesLine(state.cannonLives));
   refs.powerupStatusText.setText(formatPowerupStatus(state.shieldTimer, state.rapidTimer));
   refs.cannonAngleText.setText("");

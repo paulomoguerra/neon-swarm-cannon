@@ -61,6 +61,19 @@ export type EnemyBase = {
   maxHp: number;
 };
 
+export type ReactorSide = "left" | "right";
+
+export type ReactorCore = {
+  id: number;
+  side: ReactorSide;
+  body: Phaser.GameObjects.Container;
+  x: number;
+  y: number;
+  hp: number;
+  maxHp: number;
+  destroyed: boolean;
+};
+
 export type Barrier = {
   id: number;
   body: Phaser.GameObjects.Container;

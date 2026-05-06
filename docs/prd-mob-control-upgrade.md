@@ -2,7 +2,7 @@
 
 ## 1. Visao e Objetivos do Produto
 
-Neon Swarm Cannon e um jogo arcade 2.5D de sobrevivencia endless inspirado no core loop de Mob Control: canhao fixo na base inferior, hordas de projeteis/energia cyan que disparam para cima por gates multiplicadores, mobs vermelhos que descem e atacam, barreiras e base inimiga com HP, loop de checkpoint ao destruir a base, e meta-progresão persistente via loja de upgrades.
+Neon Swarm Cannon e um jogo arcade 2.5D de sobrevivencia endless inspirado no core loop de Mob Control: canhao fixo na base inferior, hordas de projeteis/energia cyan que disparam para cima por gates multiplicadores, mobs vermelhos que descem por dois corredores e atacam, barreiras, dois Reactor Cores no topo com HP, loop de checkpoint ao destruir reatores, e meta-progresão persistente via loja de upgrades.
 
 O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de nenhum titulo existente. O objetivo e recriar a mecanica e a sensacao geral com arte original em Phaser 3 + TypeScript + Vite.
 
@@ -17,8 +17,8 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 3. Canhao na parte inferior central dispara a arma equipada automaticamente, sempre para cima (angulo fixo em -90 graus).
 4. Mobs azuis sobem e atravessam gates multiplicadores (x2, x3, +10).
 5. A horda azul cresce.
-6. Mobs azuis colidem com mobs vermelhos (que descem da base inimiga), barreiras e base inimiga.
-7. Destruir a base inimiga atua como checkpoint: concede moedas, incrementa `checkpointsDestroyed`, recria base/barreiras com HP escalado e continua o jogo sem fim.
+6. Mobs azuis colidem com mobs vermelhos, barreiras e Reactor Cores.
+7. Destruir um Reactor Core atua como checkpoint: concede moedas/Tech, incrementa `checkpointsDestroyed`, e recria o layout apos uma janela curta para permitir dual breach.
 8. Se um mob vermelho alcana a zona de perigo do canhao, o jogador perde uma vida. Com zero vidas, game over.
 9. Score, distancia, wave, checkpoints, kills e moedas sao rastreados durante a run.
 10. Em game over, o CTA volta para o menu/loja. O jogador pode gastar Tech session-only, trocar arma, comprar upgrades persistentes (Fire Rate, Lives) e iniciar a proxima run.
@@ -59,7 +59,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 
 ### 4.1.1 Session Arsenal e Armas
 - Armas sao session-only: estado reseta no refresh e nao usa `localStorage`.
-- `Tech` e moeda in-memory separada de Coins. Recompensas: +1 Tech por drone vermelho destruido, +10 Tech por checkpoint/base destruida.
+- `Tech` e moeda in-memory separada de Coins. Recompensas: +1 Tech por drone vermelho destruido, +10 Tech por Reactor Core destruido.
 - Uma arma equipada por vez:
   - `Laser Bolt`: tiro cyan reto, default desbloqueado.
   - `Spread Pulse`: 3 tiros cyan com espalhamento horizontal leve, fire rate mais lento.
@@ -72,10 +72,10 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 - Renderizados como projeteis de energia cyan com nucleo brilhante e trail curto, para combinar com a torre hover Option B.
 - Subem verticalmente a velocidade `blueSpeed = 280 px/s`.
 - Ao colidir com mob vermelho ou barreira, aplica `damage` da arma. Laser/Spread sao consumidos em hit de inimigo; Rail continua enquanto tiver `pierceRemaining`.
-- Ao colidir com base inimiga, base perde HP e o mob morre.
+- Ao colidir com Reactor Core, o reactor perde HP e o projetil morre.
 
 ### 4.3 Mobs Vermelhos
-- Spawnados pela base inimiga em intervalos (`redSpawnInterval` comeca em 2.2s, decai por wave ate 0.75s minimo).
+- Spawnados pelos corredores esquerdo/direito em intervalos (`redSpawnInterval` comeca em 2.2s, decai por wave ate 0.75s minimo).
 - Renderizados como familia visual de drones corrompidos em `public/assets/enemy-*.png`: Grunt, Runner, Brute, Shielded e Bomber. No estado atual, as variantes sao cosmeticas e usam o mesmo comportamento/HP dos mobs vermelhos existentes; cada mob ja carrega metadados futuros `enemyKind`, `hp` e `attackKind`.
 - Velocidade comeca em 60 px/s e aumenta 5 px/s por wave, ate +55 bonus.
 - Descendem em direcao ao canhao.
@@ -92,17 +92,19 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 - HP escala 12% por wave.
 - Cada colisao de mob azul remove 1 HP da barreira e mata o mob.
 
-### 4.6 Base Inimiga
-- HP inicial 65, escala +25 por checkpoint destruido.
-- Posicionada no topo central (`x=480, y=58`).
-- Quando destruida (HP=0): checkpoint e acionado, base e realada com HP escalado, barreiras sao recriadas com HP escalado.
+### 4.6 Dual Reactor Cores
+- Dois objetivos no topo: Left Reactor (`x≈180, y≈112`) e Right Reactor (`x≈360, y≈112`).
+- HP inicial 45 por reactor; apos checkpoint, ambos sao recriados com HP escalado pelo endless tuning.
+- Destruir qualquer reactor aciona checkpoint normal: +15 Coins, +10 Tech, `checkpointsDestroyed += 1`.
+- Se o segundo reactor cair antes do reset do checkpoint, o jogo concede `DUAL BREACH`: +10 Coins, +5 Tech e feedback visual maior.
+- O debug snapshot expõe `reactors` como fonte de verdade e mantem `base` agregado apenas para compatibilidade.
 
 ### 4.7 Sistema de Checkpoint / Endless Loop
-- Destruir a base inimiga incrementa `checkpointsDestroyed`.
-- Moedas de recompensa: 15 por checkpoint, 50 por destruir base.
+- Destruir um Reactor Core incrementa `checkpointsDestroyed`.
+- Moedas de recompensa: 15 por Reactor Core destruido; dual breach concede bonus adicional.
 - O jogo NAO termina apos o primeiro checkpoint — continua indefinidamente com escalamento progressivo.
 - `wave` incrementa a cada 18 segundos.
-- A cada checkpoint: HP da base aumenta 25, barreiras escalam 12% por wave acumulado.
+- A cada checkpoint: HP dos reactors aumenta 25, barreiras escalam 12% por wave acumulado.
 - Gradiente de dificuldade: intervalos de spawn vermelho diminuem, velocidade dos vermelhos aumenta.
 
 ### 4.8 Lives e Derrota
@@ -126,9 +128,9 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 ### 4.11 UI / HUD
 - Menu principal: best score, best distance, coins, upgrades persistentes com estado de compra claro (`Buy for`, `Need`, `MAX`), Session Arsenal com Tech/estado de armas e CTA de start em zona confortavel para toque.
 - Durante gameplay: HUD compacto dentro de uma safe area central, label da arma equipada e canvas escalado com `FIT` para evitar corte/distorcao em mobile e desktop.
-- Informacao critica persistente: score/distancia, wave/checkpoints, red/base HP e vidas.
+- Informacao critica persistente: score/distancia, wave/checkpoints, red count, Reactor L/R HP e vidas.
 - Status de powerups aparece como linha compacta contextual, sem disputar o centro do campo.
-- Feedback de checkpoint e recompensas deve ser legivel, mas nao bloquear a leitura da base, gates e hordas.
+- Feedback de checkpoint e recompensas deve ser legivel, mas nao bloquear a leitura dos reactors, gates e hordas.
 - Game over: card central dentro da safe area, resumo em multiplas linhas, best score separado e CTA alinhado com o botao.
 
 ### 4.12 Direcao de UX e Design
@@ -156,7 +158,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
 
 ### Smoke Tests (`npm run smoke`)
 
-Executa 15 testes contra Vite dev server via Playwright:
+Executa 16 testes contra Vite dev server via Playwright:
 
 1. **Page title** — title e "Neon Swarm Cannon"
 2. **Debug hooks exist** — `render_game_to_text`, `advanceTime`, shop hooks, weapon hooks, movement/gameover hooks presentes
@@ -167,18 +169,19 @@ Executa 15 testes contra Vite dev server via Playwright:
 7. **Max upgrade idempotency** — upgrades no nivel maximo nao gastam moedas nem ultrapassam cap
 8. **Session Arsenal helpers** — desbloqueia/equipa/evolui Spread Pulse e Rail Lance via debug helper
 9. **Start run + time advance** — inicia run com Space, avanca 45s, verifica estado valido e Tech acumulado
-10. **Forward-only invariant + keyboard movement** — cannon angle = -90, ArrowLeft/Right move sem alterar angulo
-11. **debug_move_cannon_to_x** — move canhao horizontalmente com o hook
-12. **debug_force_gameover** — forca gameover, valida retorno gameover -> menu/shop -> playing
-13. **Mobile canvas visible** — viewport 393x852 renderiza canvas portrait com `FIT`, sem crop
-14. **Mobile tap starts run** — tap no canvas inicia a run
-15. **Mobile drag moves cannon** — drag horizontal move o canhao e preserva angulo -90
+10. **Dual reactor debug state** — snapshot contem dois reactors, checkpoint de reactor e compatibilidade `base` agregada
+11. **Forward-only invariant + keyboard movement** — cannon angle = -90, ArrowLeft/Right move sem alterar angulo
+12. **debug_move_cannon_to_x** — move canhao horizontalmente com o hook
+13. **debug_force_gameover** — forca gameover, valida retorno gameover -> menu/shop -> playing
+14. **Mobile canvas visible** — viewport 393x852 renderiza canvas portrait com `FIT`, sem crop
+15. **Mobile tap starts run** — tap no canvas inicia a run
+16. **Mobile drag moves cannon** — drag horizontal move o canhao e preserva angulo -90
 
 ### Limites dos Smoke Tests Actuais
 
 Nao cobrem ainda:
 - Layering de powerups (shield + rapid em simultaneo)
-- Escalamento de barreiras e base por checkpoint
+- Dual breach natural em tempo real fora do avanço deterministico
 - Regressao visual automatizada do sprite do canhao Option B
 - Regressao visual automatizada dos projeteis de energia cyan
 - Screenshots comparativos desktop/mobile como criterio automatico de layout
@@ -195,7 +198,7 @@ src/game/
   runMath.ts      — Funcoes puras: wave, distance, score, red spawn interval/speed tuning
   uiText.ts       — Funcoes puras de formatacao de texto (menu lines, HUD lines)
   debugSnapshot.ts — Serializador de entidades para debug snapshot; tipos do snapshot
-  art.ts          — Factory functions Phaser (cannon, mob, gate, barrier, enemy base, powerup)
+  art.ts          — Factory functions Phaser (cannon, mob, gate, barrier, reactor, powerup)
   world.ts        — Renderizacao de background/cenario
   effects.ts      — Floating text e ring pulse
   debugHooks.ts   — Declaracoes de tipo e comentarios para hooks de debug em window
@@ -213,7 +216,7 @@ public/assets/
 O MVP atual (f30c9d4) esta pronto quando:
 
 - [x] `npm run build` passa com exit code 0
-- [x] `npm run smoke` passa 13/13
+- [x] `npm run smoke` passa 16/16
 - [x] Menu mostra best score, best distance, coins e upgrades
 - [x] Disparo automatico do canhao funciona
 - [x] Canhao Option B renderiza como sprite raster em vez de aproximacao vetorial
@@ -222,15 +225,15 @@ O MVP atual (f30c9d4) esta pronto quando:
 - [x] Gates x2, x3, +10 multiplicam mobs azuis
 - [x] Mobs vermelhos descem e colidem
 - [x] Mobs vermelhos renderizam como familia visual de drones corrompidos
-- [x] Barreiras e base perdem HP
-- [x] Destruir base atua como checkpoint e continua o jogo
+- [x] Barreiras e reactors perdem HP
+- [x] Destruir reactor atua como checkpoint e continua o jogo
 - [x] Sistema de vidas funciona
 - [x] Game over e restart funcionam
 - [x] Upgrades persistem em localStorage
 - [x] Desktop controls (Space, Arrow keys, F, 1, 2) funcionam
 - [x] Mobile touch/drag funciona
 - [x] Powerups shield e rapid funcionam
-- [x] Moedas sao awardadas por kill, checkpoint e base destroy
+- [x] Moedas sao awardadas por kill, checkpoint de reactor e dual breach
 - [x] Melhores score e distancia persistidos
 
 ---

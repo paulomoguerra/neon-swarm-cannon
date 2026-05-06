@@ -65,12 +65,13 @@ export const SQUAD_FORMATION = [
 // Level 1 gate definitions: { kind, value, x, y, width, height }
 // X scaled by 540/960 = 0.5625; Y scaled by 960/540 ≈ 1.778
 export const LEVEL_1_GATES = [
-  { kind: "multiply" as const, value: 2, x: 203, y: 436, width: 73, height: 54 },
-  { kind: "multiply" as const, value: 3, x: 338, y: 436, width: 73, height: 54 },
-  { kind: "add" as const, value: 10, x: 270, y: 258, width: 79, height: 54 },
+  { kind: "multiply" as const, value: 2, x: 180, y: 438, width: 73, height: 54 },
+  { kind: "multiply" as const, value: 3, x: 360, y: 438, width: 73, height: 54 },
+  { kind: "add" as const, value: 10, x: 270, y: 276, width: 79, height: 54 },
 ];
 
-// Enemy base config (top center) — Y scaled from 58 to 58*1.778 ≈ 103
+// Legacy single-base config retained for debug/test compatibility during the
+// dual-reactor transition.
 export const ENEMY_BASE_CONFIG = {
   x: GAME_WIDTH / 2,
   y: 103,
@@ -78,11 +79,21 @@ export const ENEMY_BASE_CONFIG = {
   hitDamagePerMob: 1,
 };
 
+export const REACTOR_CONFIGS = [
+  { id: 0, side: "left" as const, x: 180, y: 112, maxHp: 45 },
+  { id: 1, side: "right" as const, x: 360, y: 112, maxHp: 45 },
+] as const;
+
+export const REACTOR_HIT_DAMAGE_PER_MOB = 1;
+export const REACTOR_RESET_DELAY = 2.2;
+export const DUAL_BREACH_COIN_BONUS = 10;
+export const DUAL_BREACH_TECH_BONUS = 5;
+
 // Level 1 barriers: blocks between gates and base — Y scaled by 1.778
 export const LEVEL_1_BARRIERS = [
-  { id: 0, x: 270, y: 365, width: 68, height: 34, hp: 16, maxHp: 16 },
-  { id: 1, x: 203, y: 587, width: 51, height: 32, hp: 10, maxHp: 10 },
-  { id: 2, x: 338, y: 587, width: 51, height: 32, hp: 10, maxHp: 10 },
+  { id: 0, x: 270, y: 362, width: 46, height: 58, hp: 16, maxHp: 16 },
+  { id: 1, x: 180, y: 590, width: 58, height: 34, hp: 10, maxHp: 10 },
+  { id: 2, x: 360, y: 590, width: 58, height: 34, hp: 10, maxHp: 10 },
 ];
 
 // Endless run tuning

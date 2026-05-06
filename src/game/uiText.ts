@@ -6,7 +6,7 @@
  */
 
 import { UPGRADE_FIRE_COSTS, UPGRADE_LIVES_COSTS, UPGRADE_MAX_LEVEL, WEAPON_CONFIG, WEAPON_MAX_LEVEL } from "./config";
-import type { WeaponKind, WeaponSessionState } from "./types";
+import type { ReactorCore, WeaponKind, WeaponSessionState } from "./types";
 
 // ---------------------------------------------------------------------------
 // Menu formatting
@@ -82,11 +82,12 @@ export function formatHudCenter(wave: number, checkpointsDestroyed: number): str
   return `Wave ${wave}\nCP ${checkpointsDestroyed}`;
 }
 
-/** Right HUD: red mob count and base HP.
- * baseHp is null when the base is not present, otherwise an object with hp and maxHp.
- */
-export function formatHudRight(redCount: number, baseHp: { hp: number; maxHp: number } | null): string {
-  return `Red: ${redCount}\nBase ${baseHp !== null ? `${baseHp.hp}/${baseHp.maxHp}` : "—"}`;
+export function formatHudRight(redCount: number, reactors: Array<Pick<ReactorCore, "side" | "hp" | "maxHp" | "destroyed">>): string {
+  const reactorLine = reactors.map((reactor) => {
+    const label = reactor.side === "left" ? "L" : "R";
+    return reactor.destroyed ? `${label} DOWN` : `${label} ${reactor.hp}/${reactor.maxHp}`;
+  }).join("  ");
+  return `Red: ${redCount}\n${reactorLine || "Reactors —"}`;
 }
 
 /**

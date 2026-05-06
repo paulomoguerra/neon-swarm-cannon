@@ -124,6 +124,68 @@ export function createGate(scene: Phaser.Scene, label: string, x: number, y: num
 
 // ─── Enemy Base ───────────────────────────────────────────────────────────────
 
+export function createReactorCore(scene: Phaser.Scene, side: "left" | "right", x: number, y: number, hp: number, maxHp: number): Phaser.GameObjects.Container {
+  const container = scene.add.container(x, y);
+  const accent = side === "left" ? 0x00e5ff : 0xff4fd8;
+
+  const shadow = scene.add.ellipse(0, 40, 96, 20, 0x000000, 0.28);
+  const platform = scene.add.rectangle(0, 18, 94, 46, 0x191f2b, 1);
+  platform.setStrokeStyle(3, 0x4a5368, 0.95);
+  const ring = scene.add.circle(0, 1, 32, accent, 0.18);
+  ring.setStrokeStyle(4, accent, 0.82);
+  const core = scene.add.circle(0, 0, 20, accent, 0.95);
+  core.setStrokeStyle(4, 0xffffff, 0.8);
+  const cap = scene.add.rectangle(0, -31, 58, 14, 0x2a3244, 1);
+  cap.setStrokeStyle(2, accent, 0.75);
+
+  const barBg = scene.add.rectangle(0, 47, 82, 11, 0x101318);
+  barBg.setStrokeStyle(1, 0x5c6677);
+  const ratio = Math.max(0, hp / maxHp);
+  const barFill = scene.add.rectangle(-40, 47, 80 * ratio, 9, 0x44cc66);
+  barFill.setOrigin(0, 0.5);
+  const hpText = scene.add.text(0, 47, `${hp}/${maxHp}`, {
+    fontFamily: "Arial",
+    fontSize: "11px",
+    color: "#ffffff",
+    fontStyle: "bold",
+    stroke: "#000000",
+    strokeThickness: 3,
+  }).setOrigin(0.5);
+
+  container.setDataEnabled();
+  container.setData("hpText", hpText);
+  container.setData("barFill", barFill);
+  container.setData("core", core);
+  container.setData("ring", ring);
+  container.setData("platform", platform);
+
+  container.add([shadow, platform, ring, core, cap, barBg, barFill, hpText]);
+  container.setDepth(16);
+  return container;
+}
+
+export function updateReactorCoreVisual(container: Phaser.GameObjects.Container, hp: number, maxHp: number, destroyed = false): void {
+  const hpText = container.getData("hpText") as Phaser.GameObjects.Text;
+  const barFill = container.getData("barFill") as Phaser.GameObjects.Rectangle;
+  const core = container.getData("core") as Phaser.GameObjects.Arc;
+  const ring = container.getData("ring") as Phaser.GameObjects.Arc;
+  const platform = container.getData("platform") as Phaser.GameObjects.Rectangle;
+  const ratio = Math.max(0, hp / maxHp);
+
+  if (hpText) hpText.setText(destroyed ? "DOWN" : `${hp}/${maxHp}`);
+  if (barFill) {
+    barFill.width = 80 * ratio;
+    barFill.fillColor = ratio > 0.5 ? 0x44cc66 : ratio > 0.25 ? 0xffcc44 : 0xff5555;
+  }
+  if (core) {
+    core.setAlpha(destroyed ? 0.25 : 0.95);
+    core.fillColor = destroyed ? 0x4c5564 : core.fillColor;
+  }
+  if (ring) ring.setAlpha(destroyed ? 0.18 : 1);
+  if (platform) platform.fillColor = destroyed ? 0x262a32 : 0x191f2b;
+  container.setAlpha(destroyed ? 0.72 : 1);
+}
+
 export function createEnemyBase(scene: Phaser.Scene, x: number, y: number, hp: number, maxHp: number): Phaser.GameObjects.Container {
   const container = scene.add.container(x, y);
 

@@ -21,6 +21,8 @@ Runs automated Playwright smoke tests against a local Vite dev server (port 5173
 - Default session weapon state is `Laser Bolt` equipped, Tech 0, Spread/Rail locked
 - Session Arsenal helpers unlock/equip/upgrade Spread Pulse and Rail Lance
 - Session Tech accrues during deterministic play (+1 per red drone kill, +10 per checkpoint)
+- Dual-reactor map snapshot exposes two reactors and aggregate legacy base compatibility
+- Reactor checkpoints increment progress and award checkpoint Tech/Coins
 - Shop upgrades correctly deduct coins and increment upgrade levels
 - Shop purchase with insufficient coins is a no-op (coins/levels unchanged); exact-coin purchase succeeds; zero-coin purchase fails safely (idempotent)
 - Shop purchase at max upgrade level is a no-op (coins and levels unchanged)

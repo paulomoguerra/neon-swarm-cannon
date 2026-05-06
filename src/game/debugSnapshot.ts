@@ -40,6 +40,7 @@ export interface GameDebugSnapshot {
     active: Array<{ id: number; kind: string; x: number; y: number }>;
   };
   base: { hp: number; maxHp: number; x: number; y: number } | null;
+  reactors: Array<{ id: number; side: string; hp: number; maxHp: number; x: number; y: number; destroyed: boolean }>;
   barriers: Array<{ id: number; hp: number; maxHp: number; x: number; y: number }>;
   gates: Array<{
     id: number;
@@ -75,6 +76,20 @@ export function serializePowerups(
 export function serializeBase(base: { hp: number; maxHp: number; x: number; y: number } | null): GameDebugSnapshot["base"] {
   if (!base) return null;
   return { hp: base.hp, maxHp: base.maxHp, x: base.x, y: base.y };
+}
+
+export function serializeReactors(
+  reactors: Array<{ id: number; side: string; hp: number; maxHp: number; x: number; y: number; destroyed: boolean }>,
+): GameDebugSnapshot["reactors"] {
+  return reactors.map((r) => ({
+    id: r.id,
+    side: r.side,
+    hp: r.hp,
+    maxHp: r.maxHp,
+    x: r.x,
+    y: r.y,
+    destroyed: r.destroyed,
+  }));
 }
 
 export function serializeBarriers(

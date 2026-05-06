@@ -300,6 +300,10 @@ async function testStartRunAndAdvance(page) {
 
   const stateAfterStart = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
   assert(stateAfterStart.mode === "playing", `Expected mode 'playing' after Space, got '${stateAfterStart.mode}'`);
+  assert(Array.isArray(stateAfterStart.reactors), "Expected reactors array in snapshot");
+  assert(stateAfterStart.reactors.length === 2, `Expected two reactors, got ${stateAfterStart.reactors.length}`);
+  assert(stateAfterStart.reactors.some((r) => r.side === "left"), "Expected left reactor in snapshot");
+  assert(stateAfterStart.reactors.some((r) => r.side === "right"), "Expected right reactor in snapshot");
 
   // Advance 30-60 seconds of simulation
   await page.evaluate(() => window.advanceTime(45_000));
@@ -322,7 +326,7 @@ async function testStartRunAndAdvance(page) {
   // Required fields
   for (const field of [
     "mode", "cannon", "score", "distanceMeters", "wave",
-    "checkpointsDestroyed", "cannonLives", "coins", "totalCoins", "upgrades", "weapons", "powerups",
+    "checkpointsDestroyed", "cannonLives", "coins", "totalCoins", "upgrades", "weapons", "powerups", "reactors",
   ]) {
     assert(
       stateAfterAdvance[field] !== undefined,
@@ -349,6 +353,24 @@ async function testStartRunAndAdvance(page) {
     assert(playAgainVisible, "render_game_to_text still responds after gameover");
     console.log("  [PASS] gameover state: canvas present, hooks still respond");
   }
+}
+
+async function testReactorDebugState(page) {
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(500);
+  const before = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(before.reactors.length === 2, `Expected two reactors, got ${before.reactors.length}`);
+  assert(before.reactors.every((r) => r.hp > 0 && r.maxHp > 0 && r.destroyed === false), "Reactors should start alive with HP");
+
+  await page.evaluate(() => window.advanceTime(45_000));
+  await page.waitForTimeout(200);
+  const after = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+  assert(after.reactors.length === 2, "Reactors should remain a two-objective array after checkpoint resets");
+  assert(after.base !== null, "Legacy base compatibility snapshot should remain available");
+  assert(after.base.maxHp >= after.reactors.reduce((sum, r) => sum + r.maxHp, 0), "Base compatibility should aggregate reactor max HP");
+  assert(after.checkpointsDestroyed > 0, "Expected at least one reactor checkpoint after 45s deterministic advance");
+  assert(after.weapons.sessionTech >= after.checkpointsDestroyed * 10, "Tech should include reactor checkpoint rewards");
+  console.log(`  [PASS] reactor state: checkpoints=${after.checkpointsDestroyed}, reactors=${after.reactors.map((r) => `${r.side}:${r.hp}/${r.maxHp}`).join(", ")}`);
 }
 
 async function testForwardOnlyInvariant(page) {
@@ -738,6 +760,16 @@ async function main() {
       } catch (e) {
         failed++;
         errors.push({ test: "Start run + time advance", error: e.message });
+        throw e;
+      }
+
+      try {
+        console.log("[TEST] Dual reactor debug state");
+        await testReactorDebugState(page);
+        passed++;
+      } catch (e) {
+        failed++;
+        errors.push({ test: "Dual reactor debug state", error: e.message });
         throw e;
       }
 

@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { createCannon, createMob, createGate, createEnemyBase, updateEnemyBaseVisual, createBarrier, updateBarrierVisual, createPowerup } from "./game/art";
+import { createCannon, createMob, createGate, createReactorCore, updateReactorCoreVisual, createBarrier, updateBarrierVisual, createPowerup } from "./game/art";
 import {
   CANNON_MUZZLE_OFFSET,
   CANNON_X,
@@ -8,8 +8,12 @@ import {
   GAME_WIDTH,
   LEVEL_1_GATES,
   LEVEL_1_BARRIERS,
+  REACTOR_CONFIGS,
+  REACTOR_HIT_DAMAGE_PER_MOB,
+  REACTOR_RESET_DELAY,
+  DUAL_BREACH_COIN_BONUS,
+  DUAL_BREACH_TECH_BONUS,
   MOB_TUNING,
-  ENEMY_BASE_CONFIG,
   ENDLESS_TUNING,
   POWERUP_SPAWN_INTERVAL,
   POWERUP_FALL_SPEED,
@@ -49,7 +53,7 @@ import {
   startingLivesFromUpgrades,
 } from "./game/progression";
 import { calculateWave, calculateDistanceDelta, calculateScore, calculateRedSpawnInterval, calculateRedSpeed } from "./game/runMath";
-import type { Cannon, Gate, Mob, Mode, EnemyBase, Barrier, Powerup, PowerupKind, UpgradeState, WeaponKind, WeaponSessionState, EnemyKind } from "./game/types";
+import type { Cannon, Gate, Mob, Mode, ReactorCore, Barrier, Powerup, PowerupKind, UpgradeState, WeaponKind, WeaponSessionState, EnemyKind } from "./game/types";
 import type { ShopResult } from "./game/debugHooks";
 import {
   formatBestLine,
@@ -65,6 +69,7 @@ import { updatePlayingHud, clearPlayingHud, updateMenuHud } from "./game/hudSyst
 import {
   serializePowerups,
   serializeBase,
+  serializeReactors,
   serializeBarriers,
   serializeGates,
   serializeVisibleMobs,
@@ -88,9 +93,11 @@ class GameScene extends Phaser.Scene {
   private gates: Gate[] = [];
   private gateFeedbackCooldown = 0;
 
-  // Enemy base and barriers
-  private enemyBase: EnemyBase | null = null;
+  // Reactor objectives and barriers
+  private reactors: ReactorCore[] = [];
   private barriers: Barrier[] = [];
+  private reactorResetTimer = 0;
+  private dualBreachAwarded = false;
 
   // Game state
   private kills = 0;
@@ -778,8 +785,15 @@ class GameScene extends Phaser.Scene {
     // Barrier collisions — blue mobs vs barriers
     this.checkBarrierCollisions();
 
-    // Base damage — blue mobs reaching enemy base
-    this.checkBaseDamage();
+    // Reactor damage — blue mobs reaching corridor objectives
+    this.checkReactorDamage();
+
+    if (this.reactorResetTimer > 0) {
+      this.reactorResetTimer = Math.max(0, this.reactorResetTimer - dt);
+      if (this.reactorResetTimer <= 0) {
+        this.respawnCheckpoint();
+      }
+    }
 
     // Check red mob reaching cannon (game over)
     this.checkCannonDanger();
@@ -818,26 +832,34 @@ class GameScene extends Phaser.Scene {
   }
 
   private clearBaseAndBarriers(): void {
-    if (this.enemyBase) {
-      this.enemyBase.body.destroy();
-      this.enemyBase = null;
+    for (const reactor of this.reactors) {
+      reactor.body.destroy();
     }
+    this.reactors = [];
     for (const b of this.barriers) {
       b.body.destroy();
     }
     this.barriers = [];
+    this.reactorResetTimer = 0;
+    this.dualBreachAwarded = false;
   }
 
-  private createEnemyBase(): void {
-    const cfg = ENEMY_BASE_CONFIG;
-    const body = createEnemyBase(this, cfg.x, cfg.y, cfg.maxHp, cfg.maxHp);
-    this.enemyBase = {
-      body,
-      x: cfg.x,
-      y: cfg.y,
-      hp: cfg.maxHp,
-      maxHp: cfg.maxHp,
-    };
+  private createReactors(maxHp?: number): void {
+    this.reactors = [];
+    for (const cfg of REACTOR_CONFIGS) {
+      const reactorMaxHp = maxHp ?? cfg.maxHp;
+      const body = createReactorCore(this, cfg.side, cfg.x, cfg.y, reactorMaxHp, reactorMaxHp);
+      this.reactors.push({
+        id: cfg.id,
+        side: cfg.side,
+        body,
+        x: cfg.x,
+        y: cfg.y,
+        hp: reactorMaxHp,
+        maxHp: reactorMaxHp,
+        destroyed: false,
+      });
+    }
   }
 
   private createLevelBarriers(): void {
@@ -967,6 +989,8 @@ class GameScene extends Phaser.Scene {
     this.coins = 0;
     this.runStartTech = this.weaponSession.sessionTech;
     this.lastRunTechEarned = 0;
+    this.reactorResetTimer = 0;
+    this.dualBreachAwarded = false;
     this.cannonTargetX = CANNON_X;
 
     // Reset keyboard movement state
@@ -1002,8 +1026,8 @@ class GameScene extends Phaser.Scene {
     // Create level gates
     this.createLevelGates();
 
-    // Create enemy base and barriers
-    this.createEnemyBase();
+    // Create reactor objectives and barriers
+    this.createReactors();
     this.createLevelBarriers();
 
     this.updateHud();
@@ -1220,8 +1244,10 @@ class GameScene extends Phaser.Scene {
 
   private spawnRedMob(speed: number): void {
     if (this.redMobs.length >= MOB_TUNING.maxRedMobs) return;
-    // Spawn near top of board, random X within the play area — scaled for portrait
-    const laneXs = [141, 191, 242, 293, 344, 395];
+    // Spawn from the left or right reactor corridor.
+    const leftLaneXs = [141, 191, 242];
+    const rightLaneXs = [293, 344, 395];
+    const laneXs = Phaser.Math.Between(0, 1) === 0 ? leftLaneXs : rightLaneXs;
     const x = laneXs[Phaser.Math.Between(0, laneXs.length - 1)];
     const y = -30;
     const enemyKinds: EnemyKind[] = ["grunt", "runner", "brute", "shielded", "bomber"];
@@ -1340,72 +1366,92 @@ class GameScene extends Phaser.Scene {
     this.barriers = this.barriers.filter((b) => b.hp > 0);
   }
 
-  private checkBaseDamage(): void {
-    if (!this.enemyBase) return;
-    const base = this.enemyBase;
+  private checkReactorDamage(): void {
     for (const mob of this.blueMobs) {
       if (!mob.body.active) continue;
-      // Base hit zone: within 52px vertical of base center and within 150px horizontal
-      const distY = mob.body.y - base.y;
-      const distX = Math.abs(mob.body.x - base.x);
-      if (distY >= -52 && distY <= 34 && distX < 150) {
-        mob.body.setActive(false).setVisible(false);
-        base.hp -= (mob.damage ?? ENEMY_BASE_CONFIG.hitDamagePerMob);
-        updateEnemyBaseVisual(base.body, base.hp, base.maxHp);
-        if (this.feedbackCooldown <= 0) {
-          showFloatingText(this, mob.body.x, mob.body.y - 20, "-1", "#ff6666");
-          this.feedbackCooldown = 0.08;
-        }
-        if (base.hp <= 0) {
-          this.checkpointsDestroyed += 1;
-          this.coins += COIN_PER_CHECKPOINT;
-          this.weaponSession.sessionTech += SESSION_TECH_PER_CHECKPOINT;
-          // Show checkpoint reward below HUD/base area (y=185, depth 200) to avoid obscuring top HUD
-          const rewardText = this.add.text(GAME_WIDTH / 2, 188, `CHECKPOINT +${COIN_PER_CHECKPOINT}  +${SESSION_TECH_PER_CHECKPOINT}T`, {
-            fontFamily: "Arial",
-            fontSize: "22px",
-            color: "#ffcc00",
-            fontStyle: "bold",
-            stroke: "#7a3800",
-            strokeThickness: 4,
-          }).setOrigin(0.5).setDepth(200);
-          this.tweens.add({
-            targets: rewardText,
-            y: 155,
-            alpha: 0,
-            scale: 1.2,
-            duration: 900,
-            ease: "Cubic.easeOut",
-            onComplete: () => rewardText.destroy(),
-          });
-          this.cameras.main.shake(200, 0.008);
-          showRingPulse(this, GAME_WIDTH / 2, 58, 0xffcc00);
-          this.respawnCheckpoint();
-          return;
+      for (const reactor of this.reactors) {
+        if (reactor.destroyed) continue;
+        const distY = mob.body.y - reactor.y;
+        const distX = Math.abs(mob.body.x - reactor.x);
+        if (distY >= -48 && distY <= 48 && distX < 70) {
+          mob.body.setActive(false).setVisible(false);
+          reactor.hp = Math.max(0, reactor.hp - (mob.damage ?? REACTOR_HIT_DAMAGE_PER_MOB));
+          updateReactorCoreVisual(reactor.body, reactor.hp, reactor.maxHp, false);
+          if (this.feedbackCooldown <= 0) {
+            showFloatingText(this, mob.body.x, mob.body.y - 20, "-1", "#ff6666");
+            this.feedbackCooldown = 0.08;
+          }
+          if (reactor.hp <= 0) {
+            this.handleReactorDestroyed(reactor);
+            return;
+          }
+          break;
         }
       }
     }
   }
 
+  private handleReactorDestroyed(reactor: ReactorCore): void {
+    reactor.destroyed = true;
+    reactor.hp = 0;
+    updateReactorCoreVisual(reactor.body, reactor.hp, reactor.maxHp, true);
+    this.checkpointsDestroyed += 1;
+    this.coins += COIN_PER_CHECKPOINT;
+    this.weaponSession.sessionTech += SESSION_TECH_PER_CHECKPOINT;
+    this.showCheckpointReward(`REACTOR DOWN +${COIN_PER_CHECKPOINT}  +${SESSION_TECH_PER_CHECKPOINT}T`, reactor.x);
+    this.cameras.main.shake(180, 0.007);
+    showRingPulse(this, reactor.x, reactor.y, 0xffcc00);
+
+    if (this.reactors.every((r) => r.destroyed)) {
+      this.awardDualBreach();
+      this.respawnCheckpoint();
+      return;
+    }
+    this.reactorResetTimer = REACTOR_RESET_DELAY;
+  }
+
+  private awardDualBreach(): void {
+    if (this.dualBreachAwarded) return;
+    this.dualBreachAwarded = true;
+    this.coins += DUAL_BREACH_COIN_BONUS;
+    this.weaponSession.sessionTech += DUAL_BREACH_TECH_BONUS;
+    this.showCheckpointReward(`DUAL BREACH +${DUAL_BREACH_COIN_BONUS}  +${DUAL_BREACH_TECH_BONUS}T`, GAME_WIDTH / 2, "#7fffe9");
+    this.cameras.main.flash(220, 120, 255, 233, false);
+    showRingPulse(this, GAME_WIDTH / 2, 112, 0x7fffe9);
+  }
+
+  private showCheckpointReward(label: string, x: number, color = "#ffcc00"): void {
+    const rewardText = this.add.text(x, 188, label, {
+      fontFamily: "Arial",
+      fontSize: "20px",
+      color,
+      fontStyle: "bold",
+      stroke: "#06222a",
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(200);
+    this.tweens.add({
+      targets: rewardText,
+      y: 155,
+      alpha: 0,
+      scale: 1.2,
+      duration: 900,
+      ease: "Cubic.easeOut",
+      onComplete: () => rewardText.destroy(),
+    });
+  }
+
   private respawnCheckpoint(): void {
-    // Remove old base
-    if (this.enemyBase) {
-      this.enemyBase.body.destroy();
-      this.enemyBase = null;
+    for (const reactor of this.reactors) {
+      reactor.body.destroy();
     }
 
     // Compute scaled HP
     const newMaxHp = ENDLESS_TUNING.baseHpStart + this.checkpointsDestroyed * ENDLESS_TUNING.baseHpPerCheckpoint;
 
-    // Recreate base with scaled HP
-    const body = createEnemyBase(this, ENEMY_BASE_CONFIG.x, ENEMY_BASE_CONFIG.y, newMaxHp, newMaxHp);
-    this.enemyBase = {
-      body,
-      x: ENEMY_BASE_CONFIG.x,
-      y: ENEMY_BASE_CONFIG.y,
-      hp: newMaxHp,
-      maxHp: newMaxHp,
-    };
+    // Recreate both reactor cores with scaled HP
+    this.createReactors(newMaxHp);
+    this.reactorResetTimer = 0;
+    this.dualBreachAwarded = false;
 
     // Clear gates and rebuild (reset processedMobIds so gates work again)
     this.clearGates();
@@ -1481,7 +1527,12 @@ class GameScene extends Phaser.Scene {
           cannonLives: this.cannonLives,
           shieldTimer: this.shieldTimer,
           rapidTimer: this.rapidTimer,
-          baseHp: this.enemyBase ? { hp: this.enemyBase.hp, maxHp: this.enemyBase.maxHp } : null,
+          reactors: this.reactors.map((r) => ({
+            side: r.side,
+            hp: r.hp,
+            maxHp: r.maxHp,
+            destroyed: r.destroyed,
+          })),
         }
       );
       this.weaponText
@@ -1566,6 +1617,13 @@ class GameScene extends Phaser.Scene {
         rail: { ...this.weaponSession.weapons.rail },
       },
     };
+  }
+
+  private getDebugBaseCompat(): { hp: number; maxHp: number; x: number; y: number } | null {
+    if (this.reactors.length === 0) return null;
+    const totalHp = this.reactors.reduce((sum, reactor) => sum + reactor.hp, 0);
+    const totalMaxHp = this.reactors.reduce((sum, reactor) => sum + reactor.maxHp, 0);
+    return { hp: totalHp, maxHp: totalMaxHp, x: GAME_WIDTH / 2, y: 112 };
   }
 
   private handleWeaponCardAction(kind: WeaponKind): void {
@@ -1727,7 +1785,8 @@ class GameScene extends Phaser.Scene {
           this.shieldTimer,
           this.rapidTimer,
         ),
-        base: serializeBase(this.enemyBase),
+        base: serializeBase(this.getDebugBaseCompat()),
+        reactors: serializeReactors(this.reactors),
         barriers: serializeBarriers(this.barriers),
         gates: serializeGates(this.gates),
         visible: serializeVisibleMobs(this.blueMobs, this.redMobs),

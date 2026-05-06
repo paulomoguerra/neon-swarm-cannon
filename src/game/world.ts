@@ -105,6 +105,32 @@ function drawBoardSlab(background: Phaser.GameObjects.Graphics): void {
     new Phaser.Geom.Point(470, 895),
     new Phaser.Geom.Point(70, 895),
   ], true);
+
+  // Two subtle assault corridors with a central energy trench.
+  background.fillStyle(0x5bd085, 0.23);
+  background.fillPoints([
+    new Phaser.Geom.Point(82, 74),
+    new Phaser.Geom.Point(247, 56),
+    new Phaser.Geom.Point(242, 880),
+    new Phaser.Geom.Point(94, 880),
+  ], true);
+  background.fillStyle(0x6ba7ff, 0.16);
+  background.fillPoints([
+    new Phaser.Geom.Point(293, 56),
+    new Phaser.Geom.Point(458, 74),
+    new Phaser.Geom.Point(446, 880),
+    new Phaser.Geom.Point(298, 880),
+  ], true);
+  background.fillStyle(0x102b36, 0.42);
+  background.fillPoints([
+    new Phaser.Geom.Point(258, 72),
+    new Phaser.Geom.Point(282, 72),
+    new Phaser.Geom.Point(292, 884),
+    new Phaser.Geom.Point(248, 884),
+  ], true);
+  background.lineStyle(2, 0x00e5ff, 0.28);
+  background.strokeLineShape(new Phaser.Geom.Line(258, 80, 248, 884));
+  background.strokeLineShape(new Phaser.Geom.Line(282, 80, 292, 884));
 }
 
 function drawProjectedStrip(
