@@ -111,6 +111,8 @@ class GameScene extends Phaser.Scene {
   private coins = 0;
   private totalCoins = 0;
   private upgradeState: UpgradeState = { fireLevel: 0, livesLevel: 0 };
+  private runStartTech = 0;
+  private lastRunTechEarned = 0;
   private weaponSession: WeaponSessionState = {
     equippedWeapon: "laser",
     sessionTech: 0,
@@ -560,6 +562,15 @@ class GameScene extends Phaser.Scene {
     const border = equipped ? 0x7fffe9 : canAfford ? 0x44ff88 : 0x557080;
     bg.lineStyle(equipped ? 2 : 1, border, equipped ? 0.95 : 0.75);
     bg.strokeRoundedRect(bounds.x, bounds.y, bounds.width, bounds.height, 8);
+
+    const footerY = bounds.y + bounds.height - 39;
+    const footerColor = state.level >= WEAPON_MAX_LEVEL && state.unlocked
+      ? 0x334455
+      : canAfford || (state.unlocked && !equipped)
+        ? 0x1b6f48
+        : 0x46363a;
+    bg.fillStyle(footerColor, 0.9);
+    bg.fillRoundedRect(bounds.x + 8, footerY, bounds.width - 16, 28, 6);
   }
 
   // Draw the end-state overlay: full dim + centered card + restart button + summary
@@ -954,6 +965,8 @@ class GameScene extends Phaser.Scene {
     this.shieldTimer = 0;
     this.rapidTimer = 0;
     this.coins = 0;
+    this.runStartTech = this.weaponSession.sessionTech;
+    this.lastRunTechEarned = 0;
     this.cannonTargetX = CANNON_X;
 
     // Reset keyboard movement state
@@ -1037,11 +1050,13 @@ class GameScene extends Phaser.Scene {
     this.clearPowerups();
 
     this.cameras.main.shake(350, 0.012);
+    this.lastRunTechEarned = Math.max(0, this.weaponSession.sessionTech - this.runStartTech);
 
     // Build summary text for card
     const summaryLines = [
       `Score ${this.score}   Distance ${Math.floor(this.distanceMeters)}m`,
       `Wave ${this.wave}   Checkpoints ${this.checkpointsDestroyed}   Coins ${this.coins}`,
+      `Tech +${this.lastRunTechEarned}   Arsenal ${this.weaponSession.sessionTech}`,
     ];
     const bestLine = this.score >= this.bestScore
       ? `NEW BEST SCORE: ${this.bestScore}!`
@@ -1063,11 +1078,11 @@ class GameScene extends Phaser.Scene {
     this.subtitleText.setText(summaryLines.join("\n")).setVisible(true);
     this.subtitleText.setFontSize("14px");
     this.subtitleText.setAlign("center");
-    this.subtitleText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 42);
+    this.subtitleText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 55);
 
     // Best score line below
     this.bestScoreText.setText(bestLine).setVisible(true);
-    this.bestScoreText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 18);
+    this.bestScoreText.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 34);
     this.bestScoreText.setFontSize("13px");
     this.bestScoreText.setColor("#f0c840");
 

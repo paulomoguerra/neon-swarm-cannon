@@ -65,7 +65,7 @@ O jogo nao copia assets, marca, personagens, UI exata ou conteudo protegido de n
   - `Spread Pulse`: 3 tiros cyan com espalhamento horizontal leve, fire rate mais lento.
   - `Rail Lance`: disparo de energia perfurante, fire rate mais lento, pode atingir multiplos drones.
 - Session state exposto: `equippedWeapon`, `sessionTech`, level por arma, unlock de Spread/Rail.
-- O menu mostra uma loja compacta `Session Arsenal` com Tech e tres cards de armas. Tap/click em card desbloqueado equipa; card equipado tenta upgrade; card bloqueado tenta unlock quando ha Tech suficiente.
+- O menu mostra uma loja compacta `Session Arsenal` com Tech e tres cards de armas. Cada card mostra acao explicita (`UNLOCK`, `EQUIP`, `UPGRADE`, `MAX LEVEL`) e o game-over mostra Tech ganho/Tech total antes de voltar para a loja.
 
 ### 4.2 Mobs Azuis
 - Spawnados pelo canhao em intervalos regulares.

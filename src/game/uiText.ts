@@ -27,7 +27,7 @@ export function formatCoinsLine(totalCoins: number): string {
 }
 
 export function formatTechLine(sessionTech: number): string {
-  return `Tech: ${sessionTech}`;
+  return `SESSION ARSENAL   Tech: ${sessionTech}`;
 }
 
 /**
@@ -56,18 +56,16 @@ export function formatWeaponShopLine(kind: WeaponKind, session: WeaponSessionSta
   const cfg = WEAPON_CONFIG[kind];
   const state = session.weapons[kind];
   if (!state.unlocked) {
-    const action = session.sessionTech >= cfg.unlockCost ? `Unlock ${cfg.unlockCost}T` : `Need ${cfg.unlockCost}T`;
-    return `${cfg.label}\nLocked\n${action}`;
+    return `${cfg.label}\nLOCKED\nUNLOCK ${cfg.unlockCost}T`;
   }
   if (session.equippedWeapon !== kind) {
-    return `${cfg.label}\nLv${state.level} Unlocked\nEquip`;
+    return `${cfg.label}\nLV${state.level} READY\nEQUIP`;
   }
   if (state.level >= WEAPON_MAX_LEVEL) {
-    return `${cfg.label}\nLv${state.level} Equipped\nMAX`;
+    return `${cfg.label}\nLV${state.level} EQUIPPED\nMAX LEVEL`;
   }
   const cost = cfg.upgradeCosts[state.level - 1];
-  const action = session.sessionTech >= cost ? `Upgrade ${cost}T` : `Need ${cost}T`;
-  return `${cfg.label}\nLv${state.level} Equipped\n${action}`;
+  return `${cfg.label}\nLV${state.level} EQUIPPED\nUPGRADE ${cost}T`;
 }
 
 // ---------------------------------------------------------------------------
